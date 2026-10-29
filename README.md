@@ -1,2 +1,1 @@
-# medical-appointment-system
-Medical Appointment System
+# Medical Appointment System
