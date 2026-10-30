@@ -1,33 +1,40 @@
-export type AppointmentStatus =
-  | 'pending'
-  | 'confirmed'
-  | 'checked-in'
-  | 'in-progress'
-  | 'completed'
-  | 'cancelled'
-  | 'no-show'
+import type { Department } from './department'
+import type { Doctor } from './doctor'
+import type { Patient } from './patient'
+import type { AuthUser } from './user'
 
-export type AppointmentType = 'consultation' | 'follow-up' | 'check-up' | 'emergency'
+export type AppointmentStatus = 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'rejected' | 'no-show'
+export type PaymentStatus = 'unpaid' | 'paid' | 'refunded'
 
 export interface Appointment {
   id: string
+  appointmentNumber: string
   patientId: string
-  patientName: string
   doctorId: string
-  doctorName: string
   departmentId: string
-  date: string // "yyyy-MM-dd"
-  time: string // "HH:mm"
-  durationMinutes: number
-  type: AppointmentType
-  status: AppointmentStatus
+  appointmentDate: string // "yyyy-MM-dd"
+  startTime: string // "HH:mm"
+  endTime: string // "HH:mm"
   reason: string
-  notes?: string
+  status: AppointmentStatus
+  paymentStatus: PaymentStatus
   createdAt: string
   updatedAt: string
 }
 
+/** An appointment joined with the records it references, for display. */
+export interface AppointmentDetails extends Appointment {
+  patientName: string
+  patient: Patient | null
+  patientUser: AuthUser | null
+  doctorName: string
+  doctor: Doctor | null
+  departmentName: string
+  department: Department | null
+}
+
 export interface TimeSlot {
-  time: string // "HH:mm"
+  startTime: string // "HH:mm"
+  endTime: string // "HH:mm"
   available: boolean
 }

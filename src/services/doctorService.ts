@@ -1,26 +1,139 @@
-import { mockDoctors } from '@/data'
-import type { Doctor } from '@/types'
-import { LocalCollection } from './mockClient'
+import { format, getDay } from 'date-fns'
+import { fromDateKey, toDateKey } from '@/lib/date'
+import { buildScheduleSlots, timesOverlap } from '@/lib/schedule'
+import type { Doctor, DoctorSchedule, DoctorStatus, TimeSlot, User } from '@/types'
+import { createRepository, delay, nextSequence, ServiceError, type CreateInput } from './repository'
+import { storageService } from './storageService'
+import { userService } from './userService'
 
-const doctors = new LocalCollection<Doctor>('doctors', () => mockDoctors)
+const repo = createRepository('doctors', {
+  idPrefix: 'doc',
+  unique: [
+    { key: (d) => d.userId, message: 'This user already has a doctor profile' },
+    { key: (d) => d.doctorNumber, message: 'Doctor number already in use' },
+  ],
+})
+
+const scheduleRepo = createRepository('doctorSchedules', {
+  idPrefix: 'sch',
+  unique: [{ key: (s) => `${s.doctorId}|${s.dayOfWeek}`, message: 'This doctor already has a schedule for that day' }],
+})
+
+/** Appointment statuses that keep a time slot occupied. */
+export const SLOT_BLOCKING_STATUSES = ['pending', 'confirmed', 'completed'] as const
 
 export interface DoctorFilters {
   departmentId?: string
+  status?: DoctorStatus
   search?: string
 }
 
+export type CreateDoctorInput = Pick<User, 'email' | 'phone' | 'password'> &
+  Omit<CreateInput<Doctor>, 'userId' | 'doctorNumber' | 'profileImage'>
+
+function validateSchedule(s: Pick<DoctorSchedule, 'startTime' | 'endTime' | 'slotDuration' | 'breakStart' | 'breakEnd'>) {
+  if (s.startTime >= s.endTime) throw new ServiceError('Start time must be before end time')
+  if (s.slotDuration < 5) throw new ServiceError('Slots must be at least 5 minutes long')
+  if (!!s.breakStart !== !!s.breakEnd) throw new ServiceError('Set both a break start and a break end, or neither')
+  if (s.breakStart && s.breakEnd && (s.breakStart >= s.breakEnd || s.breakStart < s.startTime || s.breakEnd > s.endTime)) {
+    throw new ServiceError('The break must fall within working hours')
+  }
+}
+
 export const doctorService = {
-  list: ({ departmentId, search }: DoctorFilters = {}) =>
-    doctors.list((d) => {
-      if (!d.isActive) return false
+  getAll: ({ departmentId, status, search }: DoctorFilters = {}) =>
+    repo.getAll((d) => {
       if (departmentId && d.departmentId !== departmentId) return false
+      if (status && d.status !== status) return false
       if (search) {
         const q = search.toLowerCase()
-        return d.name.toLowerCase().includes(q) || d.specialization.toLowerCase().includes(q)
+        return d.fullName.toLowerCase().includes(q) || d.specialization.toLowerCase().includes(q)
       }
       return true
     }),
-  get: (id: string) => doctors.get(id),
-  getByUserId: async (userId: string) => (await doctors.list((d) => d.userId === userId))[0] ?? null,
-  update: (id: string, patch: Partial<Doctor>) => doctors.update(id, patch),
+
+  getById: repo.getById,
+
+  async getByUserId(userId: string) {
+    await delay()
+    return storageService.getAll('doctors').find((d) => d.userId === userId) ?? null
+  },
+
+  /** Creates the doctor's user account and profile together. */
+  async create({ email, phone, password, ...profile }: CreateDoctorInput) {
+    if (!storageService.getById('departments', profile.departmentId)) throw new ServiceError('Department not found', 'NOT_FOUND')
+    const user = await userService.create({ fullName: profile.fullName, email, phone, password, role: 'doctor' })
+    const doctorNumber = nextSequence(storageService.getAll('doctors').map((d) => d.doctorNumber), 'DOC-', 4)
+    return repo.create({ ...profile, userId: user.id, doctorNumber, profileImage: null })
+  },
+
+  async update(id: string, patch: Partial<Omit<Doctor, 'id' | 'userId' | 'doctorNumber'>>) {
+    if (patch.departmentId && !storageService.getById('departments', patch.departmentId)) {
+      throw new ServiceError('Department not found', 'NOT_FOUND')
+    }
+    const doctor = await repo.update(id, patch)
+    // Keep the linked user account's name and photo in step.
+    if (patch.fullName !== undefined || patch.profileImage !== undefined) {
+      storageService.update('users', doctor.userId, { fullName: doctor.fullName, profileImage: doctor.profileImage })
+    }
+    return doctor
+  },
+
+  /** Deletes the profile and its schedules. Refused while appointments reference it. */
+  async delete(id: string) {
+    if (storageService.getAll('appointments').some((a) => a.doctorId === id)) {
+      throw new ServiceError('This doctor has appointments on record. Set their status to inactive instead.', 'CONFLICT')
+    }
+    await repo.delete(id)
+    storageService.removeWhere('doctorSchedules', (s) => s.doctorId === id)
+  },
+
+  // ---- Schedules ---------------------------------------------------------
+
+  getSchedules: (doctorId: string) =>
+    scheduleRepo.getAll((s) => s.doctorId === doctorId).then((rows) => rows.sort((a, b) => a.dayOfWeek - b.dayOfWeek)),
+
+  async createSchedule(input: CreateInput<DoctorSchedule>) {
+    if (!storageService.getById('doctors', input.doctorId)) throw new ServiceError('Doctor not found', 'NOT_FOUND')
+    validateSchedule(input)
+    return scheduleRepo.create(input)
+  },
+
+  async updateSchedule(id: string, patch: Partial<Omit<DoctorSchedule, 'id' | 'doctorId'>>) {
+    const current = storageService.getById('doctorSchedules', id)
+    if (current) validateSchedule({ ...current, ...patch })
+    return scheduleRepo.update(id, patch)
+  },
+
+  deleteSchedule: scheduleRepo.delete,
+
+  /**
+   * Every slot the doctor works on `date` ("yyyy-MM-dd"), flagged with whether it is
+   * still free. Returns [] when the doctor is inactive or not working that day.
+   */
+  async getAvailableSlots(doctorId: string, date: string, options: { excludeAppointmentId?: string } = {}): Promise<TimeSlot[]> {
+    await delay()
+    const doctor = storageService.getById('doctors', doctorId)
+    if (!doctor || doctor.status !== 'active') return []
+    const weekday = getDay(fromDateKey(date))
+    const schedule = storageService.getAll('doctorSchedules').find((s) => s.doctorId === doctorId && s.dayOfWeek === weekday)
+    if (!schedule) return []
+
+    const booked = storageService
+      .getAll('appointments')
+      .filter(
+        (a) =>
+          a.doctorId === doctorId &&
+          a.appointmentDate === date &&
+          a.id !== options.excludeAppointmentId &&
+          (SLOT_BLOCKING_STATUSES as readonly string[]).includes(a.status),
+      )
+    // Slots that have already started today can't be booked.
+    const now = new Date()
+    const cutoff = date === toDateKey(now) ? format(now, 'HH:mm') : null
+    return buildScheduleSlots(schedule).map((slot) => ({
+      ...slot,
+      available: (!cutoff || slot.startTime > cutoff) && !booked.some((a) => timesOverlap(slot, a)),
+    }))
+  },
 }

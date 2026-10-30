@@ -8,11 +8,11 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
 import { ROLE_HOME, ROLE_LABEL, ROUTES } from '@/config/routes'
-import { DEMO_PASSWORD, mockUsers } from '@/data'
+import { DEMO_PASSWORD } from '@/data/mockData'
 import { useAuth } from '@/hooks/useAuth'
 import { toast } from '@/lib/toast'
 import { loginSchema, type LoginFormValues } from '@/lib/validation'
-import type { User as AppUser, UserRole } from '@/types'
+import type { AuthUser, UserRole } from '@/types'
 import { AuthCard } from './AuthCard'
 
 const ROLE_ICONS: Record<UserRole, typeof User> = {
@@ -33,8 +33,8 @@ export function LoginPage() {
     defaultValues: { email: '', password: '' },
   })
 
-  const onSuccess = (user: AppUser) => {
-    toast.success(`Welcome back, ${user.name.split(' ')[0]}`)
+  const onSuccess = (user: AuthUser) => {
+    toast.success(`Welcome back, ${user.fullName.split(' ')[0]}`)
     // Only honour the redirect if it belongs to the signed-in role's area.
     const home = ROLE_HOME[user.role]
     const target = from && from.startsWith(`/${user.role}`) ? from : home
@@ -53,6 +53,8 @@ export function LoginPage() {
     setDemoPending(role)
     try {
       onSuccess(await loginAsRole(role))
+    } catch (error) {
+      toast.error('Could not sign in', (error as Error).message)
     } finally {
       setDemoPending(null)
     }
@@ -104,12 +106,12 @@ export function LoginPage() {
       </div>
 
       <div className="grid grid-cols-2 gap-2">
-        {mockUsers.map((u) => {
-          const Icon = ROLE_ICONS[u.role]
+        {(Object.keys(ROLE_ICONS) as UserRole[]).map((role) => {
+          const Icon = ROLE_ICONS[role]
           return (
-            <Button key={u.id} variant="outline" onClick={() => signInAs(u.role)} disabled={demoPending !== null} className="justify-start">
-              {demoPending === u.role ? <Loader2 className="animate-spin" /> : <Icon className="text-primary" />}
-              {ROLE_LABEL[u.role]}
+            <Button key={role} variant="outline" onClick={() => signInAs(role)} disabled={demoPending !== null} className="justify-start">
+              {demoPending === role ? <Loader2 className="animate-spin" /> : <Icon className="text-primary" />}
+              {ROLE_LABEL[role]}
             </Button>
           )
         })}

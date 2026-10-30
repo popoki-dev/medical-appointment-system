@@ -3,8 +3,8 @@ import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { EmptyState } from '@/components/common/EmptyState'
 import { LoadingState } from '@/components/common/LoadingState'
-import { useAsync } from '@/hooks/useAsync'
 import { useAuth } from '@/hooks/useAuth'
+import { useNotifications } from '@/hooks/useNotifications'
 import { formatRelative } from '@/lib/date'
 import { cn } from '@/lib/utils'
 import { notificationService } from '@/services'
@@ -19,22 +19,12 @@ const TYPE_ICON: Record<NotificationType, { icon: typeof Bell; className: string
 
 export function NotificationMenu() {
   const { user } = useAuth()
-  const { data: notifications = [], isLoading, reload } = useAsync(
-    () => (user ? notificationService.listForUser(user.id) : Promise.resolve([])),
-    [user?.id],
-  )
-  const unread = notifications.filter((n) => !n.read).length
+  // Live: new notifications from bookings anywhere in the app appear here automatically.
+  const { data: notifications = [], isLoading } = useNotifications(user?.id)
+  const unread = notifications.filter((n) => !n.isRead).length
 
-  const markAll = async () => {
-    if (!user) return
-    await notificationService.markAllAsRead(user.id)
-    await reload()
-  }
-
-  const markOne = async (id: string) => {
-    await notificationService.markAsRead(id)
-    await reload()
-  }
+  const markAll = () => user && notificationService.markAllAsRead(user.id)
+  const markOne = (id: string) => notificationService.markAsRead(id)
 
   return (
     <Popover>
@@ -74,8 +64,8 @@ export function NotificationMenu() {
                   <li key={n.id}>
                     <button
                       type="button"
-                      onClick={() => !n.read && markOne(n.id)}
-                      className={cn('flex w-full gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/60', !n.read && 'bg-accent/40')}
+                      onClick={() => !n.isRead && markOne(n.id)}
+                      className={cn('flex w-full gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/60', !n.isRead && 'bg-accent/40')}
                     >
                       <span className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-full', className)}>
                         <Icon className="h-4 w-4" />
@@ -83,7 +73,7 @@ export function NotificationMenu() {
                       <span className="min-w-0 flex-1">
                         <span className="flex items-center gap-2">
                           <span className="truncate text-sm font-medium">{n.title}</span>
-                          {!n.read && <span className="h-2 w-2 shrink-0 rounded-full bg-primary" />}
+                          {!n.isRead && <span className="h-2 w-2 shrink-0 rounded-full bg-primary" />}
                         </span>
                         <span className="mt-0.5 line-clamp-2 block text-xs text-muted-foreground">{n.message}</span>
                         <span className="mt-1 block text-[11px] text-muted-foreground/80">{formatRelative(n.createdAt)}</span>

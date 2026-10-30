@@ -1,30 +1,40 @@
-import { createContext, useCallback, useMemo, useState, type ReactNode } from 'react'
-import { authService } from '@/services'
-import type { LoginCredentials, User, UserRole } from '@/types'
+import { createContext, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { authService, storageService } from '@/services'
+import type { AuthUser, LoginCredentials, UserRole } from '@/types'
 
 export interface AuthContextValue {
-  user: User | null
+  user: AuthUser | null
   isAuthenticated: boolean
-  login: (credentials: LoginCredentials) => Promise<User>
-  loginAsRole: (role: UserRole) => Promise<User>
+  login: (credentials: LoginCredentials) => Promise<AuthUser>
+  loginAsRole: (role: UserRole) => Promise<AuthUser>
   logout: () => Promise<void>
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(() => authService.getSession()?.user ?? null)
+  const [user, setUser] = useState<AuthUser | null>(() => authService.getCurrentUser())
+
+  // The session stores only a user id; re-read the user whenever user records change
+  // so name/photo edits, deactivation or a data reset are reflected straight away.
+  useEffect(
+    () =>
+      storageService.subscribe((changed) => {
+        if (changed.includes('users')) setUser(authService.getCurrentUser())
+      }),
+    [],
+  )
 
   const login = useCallback(async (credentials: LoginCredentials) => {
-    const session = await authService.login(credentials)
-    setUser(session.user)
-    return session.user
+    const signedIn = await authService.login(credentials)
+    setUser(signedIn)
+    return signedIn
   }, [])
 
   const loginAsRole = useCallback(async (role: UserRole) => {
-    const session = await authService.loginAsRole(role)
-    setUser(session.user)
-    return session.user
+    const signedIn = await authService.loginAsRole(role)
+    setUser(signedIn)
+    return signedIn
   }, [])
 
   const logout = useCallback(async () => {

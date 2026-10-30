@@ -41,3 +41,8 @@ export function getDayPeriod(time: string): 'morning' | 'afternoon' | 'evening' 
   if (hour < 17) return 'afternoon'
   return 'evening'
 }
+
+/** "09:30" + 45 -> "10:15" */
+export function addMinutesToTime(time: string, minutes: number) {
+  return format(addMinutes(parse(time, 'HH:mm', new Date(2000, 0, 1)), minutes), 'HH:mm')
+}

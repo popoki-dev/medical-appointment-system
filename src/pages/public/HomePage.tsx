@@ -17,7 +17,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { ROUTES } from '@/config/routes'
-import { mockDepartments } from '@/data'
+import { useDepartments } from '@/hooks/useDepartments'
 
 const DEPARTMENT_ICONS: Record<string, LucideIcon> = { HeartPulse, Brain, Baby, Bone, Sparkles, Stethoscope }
 
@@ -28,6 +28,7 @@ const STEPS = [
 ]
 
 export function HomePage() {
+  const { data: departments = [] } = useDepartments('active')
   return (
     <>
       <section className="relative overflow-hidden border-b bg-gradient-to-b from-accent/60 to-background">
@@ -95,7 +96,7 @@ export function HomePage() {
           <p className="mt-3 text-muted-foreground">Specialist teams across every stage of life.</p>
         </div>
         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {mockDepartments.map((d) => {
+          {departments.map((d) => {
             const Icon = DEPARTMENT_ICONS[d.icon] ?? Stethoscope
             return (
               <Card key={d.id} className="group p-6 transition-shadow hover:shadow-elevated">
