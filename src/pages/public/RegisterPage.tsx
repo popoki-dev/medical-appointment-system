@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ROUTES } from '@/config/routes'
+import { GENDER_OPTIONS } from '@/config/status'
 import { useAuth } from '@/hooks/useAuth'
 import { toDateKey } from '@/lib/date'
 import { toast } from '@/lib/toast'
@@ -15,12 +16,6 @@ import { cn } from '@/lib/utils'
 import { PASSWORD_RULES, registerSchema, type RegisterFormValues } from '@/lib/validation'
 import { ServiceError } from '@/services'
 import { AuthCard } from './AuthCard'
-
-const GENDER_OPTIONS = [
-  { value: 'female', label: 'Female' },
-  { value: 'male', label: 'Male' },
-  { value: 'other', label: 'Other' },
-] as const
 
 export function RegisterPage() {
   const { registerPatient } = useAuth()

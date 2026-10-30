@@ -14,6 +14,17 @@ const repo = createRepository('appointments', {
 
 const isBlocking = (status: AppointmentStatus) => (SLOT_BLOCKING_STATUSES as readonly string[]).includes(status)
 
+/** Statuses a patient may still cancel themselves. */
+export const PATIENT_CANCELLABLE_STATUSES: readonly AppointmentStatus[] = ['pending', 'confirmed']
+
+export const canPatientCancel = (appointment: Pick<Appointment, 'status'>) =>
+  PATIENT_CANCELLABLE_STATUSES.includes(appointment.status)
+
+/** Pending or confirmed, and not yet started. */
+export const isUpcoming = (appointment: Pick<Appointment, 'status' | 'appointmentDate' | 'startTime'>, now = new Date()) =>
+  canPatientCancel(appointment) &&
+  `${appointment.appointmentDate} ${appointment.startTime}` >= `${toDateKey(now)} ${formatDate(now, 'HH:mm')}`
+
 export interface AppointmentFilters {
   patientId?: string
   doctorId?: string
@@ -177,6 +188,44 @@ export const appointmentService = {
     })
     const title = STATUS_MESSAGES[status]
     if (title) notifyParties(updated, title, `${title}: ${describe(updated)}.`, { toDoctor: status === 'cancelled' })
+    return updated
+  },
+
+  /**
+   * Cancels an appointment on the patient's behalf. Only the patient who owns it may
+   * cancel, and only while it is still pending or confirmed.
+   */
+  async cancelByPatient(id: string, patientId: string) {
+    const current = storageService.getById('appointments', id)
+    if (!current || current.patientId !== patientId) throw new ServiceError('Appointment not found', 'NOT_FOUND')
+    if (!canPatientCancel(current)) {
+      throw new ServiceError('Only pending or confirmed appointments can be cancelled.', 'CONFLICT')
+    }
+    const updated = await repo.update(id, {
+      status: 'cancelled',
+      ...(current.paymentStatus === 'paid' ? { paymentStatus: 'refunded' as const } : {}),
+      updatedAt: new Date().toISOString(),
+    })
+
+    const patient = storageService.getById('patients', patientId)
+    const doctor = storageService.getById('doctors', updated.doctorId)
+    const patientName = (patient && storageService.getById('users', patient.userId)?.fullName) ?? 'A patient'
+    if (patient) {
+      notificationService.notify({
+        userId: patient.userId,
+        title: 'Appointment cancelled',
+        message: `You cancelled ${updated.appointmentNumber} with ${doctor?.fullName ?? 'your doctor'} on ${describe(updated)}.`,
+        type: 'appointment',
+      })
+    }
+    if (doctor) {
+      notificationService.notify({
+        userId: doctor.userId,
+        title: 'Appointment cancelled by patient',
+        message: `${patientName} cancelled ${updated.appointmentNumber} on ${describe(updated)}. The slot is free again.`,
+        type: 'appointment',
+      })
+    }
     return updated
   },
 

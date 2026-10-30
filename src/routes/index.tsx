@@ -68,15 +68,43 @@ const patientRoutes = portal('patient', 'Patient', <PatientLayout />, [
     permission: 'dashboard:patient',
     element: lazyPage(() => import('@/pages/patient/PatientDashboardPage'), 'PatientDashboardPage'),
   }),
-  page({ path: 'doctors', title: 'Find a Doctor', permission: 'doctors:browse', description: 'Browse doctors by department, specialty and availability.' }),
+  page({ path: 'book', title: 'Book Appointment', permission: 'appointments:book', description: 'Choose a department, doctor and time slot.' }),
   page({
-    path: 'book',
-    title: 'Book Appointment',
-    permission: 'appointments:book',
-    element: lazyPage(() => import('@/pages/patient/BookAppointmentPage'), 'BookAppointmentPage'),
+    path: 'doctors',
+    title: 'Find Doctors',
+    permission: 'doctors:browse',
+    element: lazyPage(() => import('@/pages/patient/FindDoctorsPage'), 'FindDoctorsPage'),
   }),
-  page({ path: 'appointments', title: 'My Appointments', permission: 'appointments:view-own', description: 'View, reschedule or cancel your bookings.' }),
-  page({ path: 'profile', title: 'Profile Settings', permission: 'profile:manage', description: 'Personal details, emergency contact and password.' }),
+  page({
+    path: 'appointments',
+    title: 'My Appointments',
+    permission: 'appointments:view-own',
+    element: lazyPage(() => import('@/pages/patient/MyAppointmentsPage'), 'MyAppointmentsPage'),
+  }),
+  page({
+    path: 'medical',
+    title: 'Medical Information',
+    permission: 'medical-info:view-own',
+    element: lazyPage(() => import('@/pages/patient/MedicalInformationPage'), 'MedicalInformationPage'),
+  }),
+  page({
+    path: 'notifications',
+    title: 'Notifications',
+    permission: 'notifications:view-own',
+    element: lazyPage(() => import('@/pages/patient/NotificationsPage'), 'NotificationsPage'),
+  }),
+  page({
+    path: 'profile',
+    title: 'My Profile',
+    permission: 'profile:manage',
+    element: lazyPage(() => import('@/pages/patient/PatientProfilePage'), 'PatientProfilePage'),
+  }),
+  page({
+    path: 'settings',
+    title: 'Settings',
+    permission: 'profile:manage',
+    element: lazyPage(() => import('@/pages/patient/PatientSettingsPage'), 'PatientSettingsPage'),
+  }),
 ])
 
 const doctorRoutes = portal('doctor', 'Doctor', <DoctorLayout />, [

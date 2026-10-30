@@ -143,6 +143,27 @@ every page needs (`ROUTE_PERMISSIONS`). It exports `hasPermission`, `hasRole`, `
 
 `<GuestRoute>` sends signed-in users away from the login, registration and reset pages.
 
+## Patient portal
+
+Every patient page reads only the signed-in patient's own records (`useCurrentPatient()`,
+then queries filtered by that patient's id).
+
+| Page                | Route                    | What it does |
+| ------------------- | ------------------------ | ------------ |
+| Dashboard           | `/patient/dashboard`     | Welcome, patient ID, upcoming/completed/cancelled counts, next appointment with view and cancel, recent appointments, quick actions, notifications, profile summary |
+| Find Doctors        | `/patient/doctors`       | Active doctors with search and department filter, each with a Book link |
+| My Appointments     | `/patient/appointments`  | Tabs (All, Upcoming, Pending, Confirmed, Completed, Cancelled), search, date range and status filters (kept in the URL), details modal, cancel |
+| Medical Information | `/patient/medical`       | Basic profile details and clearly labelled fictional sample data. Not a health record |
+| Notifications       | `/patient/notifications` | All notifications, filters, mark one or all as read |
+| My Profile          | `/patient/profile`       | Edit name, phone, date of birth, gender, address and emergency contact |
+| Settings            | `/patient/settings`      | Change password, sign out |
+
+**Cancellation.** `appointmentService.cancelByPatient(id, patientId)` only accepts the
+patient's own appointments while they are `pending` or `confirmed`. The UI asks for
+confirmation first. Cancelling sets the status to `cancelled` (a paid visit becomes
+`refunded`), frees the slot and notifies both the patient and the doctor. Every dashboard
+watches the `appointments` collection, so the change shows everywhere at once, including in other tabs.
+
 ### Backend readiness
 
 Pages and hooks only call `src/services/*`. To integrate a real API, re-implement the
@@ -158,5 +179,5 @@ They are all demonstrated live at **Admin → UI Kit** (`/admin/ui-kit`).
 ## Status
 
 The design system, layouts, reusable components, data layer, mock authentication, role-based
-routing, the public website, the patient booking flow and the role dashboards are in place. Every other module route is wired up with a "coming soon" placeholder,
+routing, role dashboards and the patient portal are in place. Every other module route is wired up with a "coming soon" placeholder,
 ready for its screens to be built.

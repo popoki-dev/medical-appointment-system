@@ -24,6 +24,9 @@ const withUser = (patient: Patient): PatientWithUser => {
 export type RegisterPatientInput = Pick<User, 'fullName' | 'email' | 'phone' | 'password'> &
   Omit<CreateInput<Patient>, 'userId' | 'patientNumber'>
 
+export type PatientProfileInput = Pick<User, 'fullName' | 'phone'> &
+  Pick<Patient, 'dateOfBirth' | 'gender' | 'address' | 'emergencyContact'>
+
 export const patientService = {
   getAll: repo.getAll,
 
@@ -62,6 +65,13 @@ export const patientService = {
     }),
 
   update: (id: string, patch: Partial<Omit<Patient, 'id' | 'userId' | 'patientNumber'>>) => repo.update(id, patch),
+
+  /** Updates the details a patient edits themselves: account name and phone plus their profile. */
+  async updateProfile(id: string, { fullName, phone, ...profile }: PatientProfileInput) {
+    const patient = await repo.getById(id)
+    await userService.update(patient.userId, { fullName: fullName.trim(), phone: phone.trim() })
+    return repo.update(id, { ...profile, address: profile.address.trim() })
+  },
 
   async delete(id: string) {
     if (storageService.getAll('appointments').some((a) => a.patientId === id)) {

@@ -30,7 +30,10 @@ export const ROUTES = {
       return search ? `/patient/book?${search}` : '/patient/book'
     },
     appointments: '/patient/appointments',
+    medical: '/patient/medical',
+    notifications: '/patient/notifications',
     profile: '/patient/profile',
+    settings: '/patient/settings',
   },
   doctor: {
     root: '/doctor',

@@ -42,25 +42,31 @@ export type LoginFormValues = z.infer<typeof loginSchema>
 const MIN_BIRTH_DATE = '1900-01-01'
 const isValidDateKey = (v: string) => /^\d{4}-\d{2}-\d{2}$/.test(v) && isValid(parseISO(v))
 
+const fullNameSchema = requiredString('Full name')
+  .min(3, 'Enter your full name')
+  .max(80, 'Name must be 80 characters or fewer')
+  .regex(/^[\p{L}\s.'-]+$/u, 'Name can only contain letters, spaces, hyphens and apostrophes')
+
+const dateOfBirthSchema = z
+  .string()
+  .min(1, 'Date of birth is required')
+  .refine((v) => isValidDateKey(v) && v >= MIN_BIRTH_DATE, 'Enter a valid date of birth')
+  .refine((v) => v <= toDateKey(new Date()), 'Date of birth cannot be in the future')
+
+const genderSchema = z.enum(['male', 'female', 'other'], {
+  required_error: 'Gender is required',
+  invalid_type_error: 'Gender is required',
+})
+
 export const registerSchema = z
   .object({
-    fullName: requiredString('Full name')
-      .min(3, 'Enter your full name')
-      .max(80, 'Name must be 80 characters or fewer')
-      .regex(/^[\p{L}\s.'-]+$/u, 'Name can only contain letters, spaces, hyphens and apostrophes'),
+    fullName: fullNameSchema,
     email: emailSchema,
     phone: phoneSchema,
     password: passwordSchema,
     confirmPassword: z.string().min(1, 'Please confirm your password'),
-    dateOfBirth: z
-      .string()
-      .min(1, 'Date of birth is required')
-      .refine((v) => isValidDateKey(v) && v >= MIN_BIRTH_DATE, 'Enter a valid date of birth')
-      .refine((v) => v <= toDateKey(new Date()), 'Date of birth cannot be in the future'),
-    gender: z.enum(['male', 'female', 'other'], {
-      required_error: 'Gender is required',
-      invalid_type_error: 'Gender is required',
-    }),
+    dateOfBirth: dateOfBirthSchema,
+    gender: genderSchema,
   })
   .refine(passwordsMatch, mismatch)
 export type RegisterFormValues = z.infer<typeof registerSchema>
@@ -76,3 +82,36 @@ export const resetPasswordSchema = z
   })
   .refine(passwordsMatch, mismatch)
 export type ResetPasswordFormValues = z.infer<typeof resetPasswordSchema>
+
+/** The emergency contact is optional, but once started it needs all three fields. */
+const emergencyContactSchema = z
+  .object({
+    name: z.string().trim().max(80, 'Name must be 80 characters or fewer'),
+    relationship: z.string().trim().max(40, 'Relationship must be 40 characters or fewer'),
+    phone: z.string().trim(),
+  })
+  .superRefine((v, ctx) => {
+    if (!v.name && !v.relationship && !v.phone) return
+    if (!v.name) ctx.addIssue({ code: 'custom', path: ['name'], message: 'Contact name is required' })
+    if (!v.relationship) ctx.addIssue({ code: 'custom', path: ['relationship'], message: 'Relationship is required' })
+    if (!phoneSchema.safeParse(v.phone).success) ctx.addIssue({ code: 'custom', path: ['phone'], message: 'Enter a valid phone number' })
+  })
+
+export const patientProfileSchema = z.object({
+  fullName: fullNameSchema,
+  phone: phoneSchema,
+  dateOfBirth: dateOfBirthSchema,
+  gender: genderSchema,
+  address: z.string().trim().max(200, 'Address must be 200 characters or fewer'),
+  emergencyContact: emergencyContactSchema,
+})
+export type PatientProfileFormValues = z.infer<typeof patientProfileSchema>
+
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1, 'Enter your current password'),
+    newPassword: passwordSchema,
+    confirmPassword: z.string().min(1, 'Please confirm your new password'),
+  })
+  .refine((v) => v.newPassword === v.confirmPassword, mismatch)
+export type ChangePasswordFormValues = z.infer<typeof changePasswordSchema>

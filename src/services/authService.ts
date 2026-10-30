@@ -1,5 +1,6 @@
 import { storage } from '@/lib/storage'
 import type { AuthSession, AuthUser, Gender, LoginCredentials, User } from '@/types'
+import { notificationService } from './notificationService'
 import { patientService } from './patientService'
 import { caseInsensitive, delay, ServiceError } from './repository'
 import { storageService } from './storageService'
@@ -109,6 +110,24 @@ export const authService = {
     }
     await userService.update(request.userId, { password })
     storage.remove(RESET_KEY)
+  },
+
+  /** Changes a signed-in user's password after checking their current one. */
+  async changePassword(userId: string, { currentPassword, newPassword }: { currentPassword: string; newPassword: string }) {
+    await delay()
+    const user = storageService.getById('users', userId)
+    if (!user) throw new ServiceError('Account not found', 'NOT_FOUND')
+    if (user.password !== currentPassword) throw new ServiceError('Your current password is incorrect.', 'VALIDATION', 'currentPassword')
+    if (newPassword === currentPassword) {
+      throw new ServiceError('Choose a password different from your current one.', 'VALIDATION', 'newPassword')
+    }
+    await userService.update(userId, { password: newPassword })
+    notificationService.notify({
+      userId,
+      title: 'Password changed',
+      message: 'Your account password was changed. If this wasn’t you, reset it from the sign-in page.',
+      type: 'system',
+    })
   },
 
   async logout(): Promise<void> {

@@ -1,6 +1,8 @@
 import {
   BarChart3,
+  Bell,
   Building2,
+  ClipboardList,
   CalendarCheck,
   CalendarClock,
   CalendarDays,
@@ -21,12 +23,20 @@ export const NAVIGATION: Record<UserRole, NavSection[]> = {
     {
       items: [
         { title: 'Dashboard', href: ROUTES.patient.dashboard, icon: LayoutDashboard },
-        { title: 'Find a Doctor', href: ROUTES.patient.doctors, icon: Stethoscope },
         { title: 'Book Appointment', href: ROUTES.patient.book, icon: CalendarPlus },
+        { title: 'Find Doctors', href: ROUTES.patient.doctors, icon: Stethoscope },
         { title: 'My Appointments', href: ROUTES.patient.appointments, icon: CalendarDays },
+        { title: 'Medical Information', href: ROUTES.patient.medical, icon: ClipboardList },
+        { title: 'Notifications', href: ROUTES.patient.notifications, icon: Bell },
       ],
     },
-    { label: 'Account', items: [{ title: 'Profile Settings', href: ROUTES.patient.profile, icon: UserCircle }] },
+    {
+      label: 'Account',
+      items: [
+        { title: 'My Profile', href: ROUTES.patient.profile, icon: UserCircle },
+        { title: 'Settings', href: ROUTES.patient.settings, icon: Settings },
+      ],
+    },
   ],
   doctor: [
     {

@@ -1,4 +1,4 @@
-import type { AppointmentStatus, PaymentStatus, StatusTone } from '@/types'
+import type { AppointmentStatus, Gender, PaymentStatus, StatusTone } from '@/types'
 
 export const APPOINTMENT_STATUS_META: Record<AppointmentStatus, { label: string; tone: StatusTone }> = {
   pending: { label: 'Pending', tone: 'warning' },
@@ -14,3 +14,9 @@ export const PAYMENT_STATUS_META: Record<PaymentStatus, { label: string; tone: S
   paid: { label: 'Paid', tone: 'success' },
   refunded: { label: 'Refunded', tone: 'neutral' },
 }
+
+export const GENDER_OPTIONS: readonly { value: Gender; label: string }[] = [
+  { value: 'female', label: 'Female' },
+  { value: 'male', label: 'Male' },
+  { value: 'other', label: 'Other' },
+]
