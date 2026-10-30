@@ -29,7 +29,7 @@ export function PublicLayout() {
         <Link to={ROUTES.login}>Sign in</Link>
       </Button>
       <Button asChild>
-        <Link to={ROUTES.patient.bookWith()}>Book appointment</Link>
+        <Link to={ROUTES.bookWith()}>Book appointment</Link>
       </Button>
     </>
   )
@@ -89,7 +89,7 @@ export function PublicLayout() {
           <FooterLinks
             title="Patients"
             links={[
-              { title: 'Book an appointment', href: ROUTES.patient.bookWith() },
+              { title: 'Book an appointment', href: ROUTES.bookWith() },
               { title: 'Find a doctor', href: ROUTES.doctors },
               { title: 'Create an account', href: ROUTES.register },
               { title: 'Sign in', href: ROUTES.login },

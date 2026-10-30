@@ -7,6 +7,7 @@
  */
 import { addDays, getDay, subDays, subHours, subMinutes } from 'date-fns'
 import { buildScheduleSlots } from '@/lib/schedule'
+import { nextAppointmentNumber } from '@/lib/appointmentNumber'
 import { toDateKey } from '@/lib/date'
 import type {
   Appointment,
@@ -334,7 +335,10 @@ function buildAppointments(today: Date, doctors: Doctor[], schedules: DoctorSche
       n++
       appointments.push({
         id: `apt_${pad(n)}`,
-        appointmentNumber: `APT-${pad(n, 6)}`,
+        appointmentNumber: nextAppointmentNumber(
+          appointments.map((a) => a.appointmentNumber),
+          new Date(createdAt),
+        ),
         patientId: patient.id,
         doctorId: doctor.id,
         departmentId: doctor.departmentId,

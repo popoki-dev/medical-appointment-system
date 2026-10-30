@@ -6,6 +6,11 @@ import type { AuthUser } from './user'
 export type AppointmentStatus = 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'rejected' | 'no-show'
 export type PaymentStatus = 'unpaid' | 'paid' | 'refunded'
 
+export interface AppointmentContact {
+  phone: string
+  email: string
+}
+
 export interface Appointment {
   id: string
   appointmentNumber: string
@@ -16,6 +21,10 @@ export interface Appointment {
   startTime: string // "HH:mm"
   endTime: string // "HH:mm"
   reason: string
+  /** Optional extra information from the patient. */
+  notes?: string
+  /** How to reach the patient about this visit, captured at booking. */
+  contact?: AppointmentContact
   status: AppointmentStatus
   paymentStatus: PaymentStatus
   createdAt: string

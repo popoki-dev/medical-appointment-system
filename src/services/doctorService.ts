@@ -19,8 +19,12 @@ const scheduleRepo = createRepository('doctorSchedules', {
   unique: [{ key: (s) => `${s.doctorId}|${s.dayOfWeek}`, message: 'This doctor already has a schedule for that day' }],
 })
 
-/** Appointment statuses that keep a time slot occupied. */
-export const SLOT_BLOCKING_STATUSES = ['pending', 'confirmed', 'completed'] as const
+/**
+ * Appointment statuses that keep a time slot occupied. Cancelled and rejected
+ * appointments release their slot; completed and no-show visits keep theirs, so the
+ * history of what happened in that slot is never overwritten.
+ */
+export const SLOT_BLOCKING_STATUSES = ['pending', 'confirmed', 'completed', 'no-show'] as const
 
 export interface DoctorAvailability {
   /** The first free slot in the window, or null when fully booked or not working. */
@@ -29,7 +33,12 @@ export interface DoctorAvailability {
   freeByDate: Record<string, number>
 }
 
-function computeSlots(doctorId: string, date: string, excludeAppointmentId?: string): TimeSlot[] {
+/**
+ * Every slot the doctor works on `date`, flagged with whether it is free. Built from the
+ * doctor's weekly schedule (hours, slot length, break) and the appointments that hold a
+ * slot, read fresh from the store. Times are local "HH:mm", the same as the schedule.
+ */
+export function computeSlots(doctorId: string, date: string, excludeAppointmentId?: string): TimeSlot[] {
   const doctor = storageService.getById('doctors', doctorId)
   if (!doctor || doctor.status !== 'active') return []
   const weekday = getDay(fromDateKey(date))

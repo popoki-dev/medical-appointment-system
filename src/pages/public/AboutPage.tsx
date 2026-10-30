@@ -121,7 +121,7 @@ export function AboutPage() {
               <Link to={ROUTES.doctors}>Our doctors</Link>
             </Button>
             <Button asChild>
-              <Link to={ROUTES.patient.bookWith()}>
+              <Link to={ROUTES.bookWith()}>
                 <CalendarPlus /> Book an Appointment
               </Link>
             </Button>

@@ -59,7 +59,7 @@ export function DoctorCard({ doctor, department, availability }: DoctorCardProps
           <Link to={profileHref}>View Profile</Link>
         </Button>
         <Button asChild>
-          <Link to={ROUTES.patient.bookWith({ doctorId: doctor.id })}>
+          <Link to={ROUTES.bookWith({ doctorId: doctor.id })}>
             <CalendarPlus /> Book
           </Link>
         </Button>

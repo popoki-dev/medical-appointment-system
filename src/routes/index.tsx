@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
-import { createBrowserRouter, Navigate, type RouteObject } from 'react-router-dom'
+import { createBrowserRouter, Navigate, useLocation, type RouteObject } from 'react-router-dom'
 import type { RouteHandle } from '@/components/layout/AppBreadcrumbs'
-import { ROLE_HOME } from '@/config/routes'
+import { ROLE_HOME, ROUTES } from '@/config/routes'
 import { AdminLayout, DoctorLayout, PatientLayout, PublicLayout, ReceptionistLayout } from '@/layouts'
 import { NotFoundPage } from '@/pages/errors/NotFoundPage'
 import { RouteErrorPage } from '@/pages/errors/RouteErrorPage'
@@ -68,7 +68,8 @@ const patientRoutes = portal('patient', 'Patient', <PatientLayout />, [
     permission: 'dashboard:patient',
     element: lazyPage(() => import('@/pages/patient/PatientDashboardPage'), 'PatientDashboardPage'),
   }),
-  page({ path: 'book', title: 'Book Appointment', permission: 'appointments:book', description: 'Choose a department, doctor and time slot.' }),
+  // Old address of the booking wizard, kept so existing links still work.
+  { path: 'book', element: <LegacyBookRedirect /> },
   page({
     path: 'doctors',
     title: 'Find Doctors',
@@ -106,6 +107,41 @@ const patientRoutes = portal('patient', 'Patient', <PatientLayout />, [
     element: lazyPage(() => import('@/pages/patient/PatientSettingsPage'), 'PatientSettingsPage'),
   }),
 ])
+
+/** The booking wizard and its success page, shown inside the patient portal's layout. */
+const bookingRoutes: RouteObject = {
+  path: 'book-appointment',
+  handle: crumb('Book Appointment'),
+  element: (
+    <ProtectedRoute roles={['patient']}>
+      <PatientLayout />
+    </ProtectedRoute>
+  ),
+  children: [
+    {
+      index: true,
+      element: (
+        <ProtectedRoute permission="appointments:book">
+          {lazyPage(() => import('@/pages/booking/BookAppointmentPage'), 'BookAppointmentPage')}
+        </ProtectedRoute>
+      ),
+    },
+    {
+      path: 'success/:appointmentId',
+      handle: crumb('Booking confirmed'),
+      element: (
+        <ProtectedRoute permission="appointments:book">
+          {lazyPage(() => import('@/pages/booking/BookingSuccessPage'), 'BookingSuccessPage')}
+        </ProtectedRoute>
+      ),
+    },
+  ],
+}
+
+function LegacyBookRedirect() {
+  const { search } = useLocation()
+  return <Navigate to={`${ROUTES.bookAppointment}${search}`} replace />
+}
 
 const doctorRoutes = portal('doctor', 'Doctor', <DoctorLayout />, [
   page({
@@ -176,6 +212,7 @@ export const router = createBrowserRouter([
     children: [
       publicRoutes,
       patientRoutes,
+      bookingRoutes,
       doctorRoutes,
       receptionistRoutes,
       adminRoutes,

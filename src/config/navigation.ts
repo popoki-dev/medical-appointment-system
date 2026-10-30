@@ -23,7 +23,7 @@ export const NAVIGATION: Record<UserRole, NavSection[]> = {
     {
       items: [
         { title: 'Dashboard', href: ROUTES.patient.dashboard, icon: LayoutDashboard },
-        { title: 'Book Appointment', href: ROUTES.patient.book, icon: CalendarPlus },
+        { title: 'Book Appointment', href: ROUTES.bookAppointment, icon: CalendarPlus },
         { title: 'Find Doctors', href: ROUTES.patient.doctors, icon: Stethoscope },
         { title: 'My Appointments', href: ROUTES.patient.appointments, icon: CalendarDays },
         { title: 'Medical Information', href: ROUTES.patient.medical, icon: ClipboardList },

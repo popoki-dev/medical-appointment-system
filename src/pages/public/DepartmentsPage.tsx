@@ -72,7 +72,7 @@ export function DepartmentsPage() {
                         </Link>
                       </Button>
                       <Button variant="outline" asChild>
-                        <Link to={ROUTES.patient.bookWith({ departmentId: department.id })}>Book in {department.name}</Link>
+                        <Link to={ROUTES.bookWith({ departmentId: department.id })}>Book in {department.name}</Link>
                       </Button>
                     </div>
                   </div>

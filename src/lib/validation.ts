@@ -1,5 +1,6 @@
 import { isValid, parseISO } from 'date-fns'
 import { z } from 'zod'
+import { BOOKING_CONFIG } from '@/config/booking'
 import { toDateKey } from './date'
 
 export const emailSchema = z.string().trim().min(1, 'Email is required').email('Enter a valid email address')
@@ -115,3 +116,17 @@ export const changePasswordSchema = z
   })
   .refine((v) => v.newPassword === v.confirmPassword, mismatch)
 export type ChangePasswordFormValues = z.infer<typeof changePasswordSchema>
+
+/** Step 5 of the booking wizard. The service re-validates with the same schema. */
+export const bookingDetailsSchema = z.object({
+  reason: z
+    .string()
+    .trim()
+    .min(1, 'Please tell us the reason for your visit')
+    .min(BOOKING_CONFIG.reasonMinLength, `Please give a little more detail (at least ${BOOKING_CONFIG.reasonMinLength} characters)`)
+    .max(BOOKING_CONFIG.reasonMaxLength, `Please keep it under ${BOOKING_CONFIG.reasonMaxLength} characters`),
+  notes: z.string().trim().max(BOOKING_CONFIG.notesMaxLength, `Please keep notes under ${BOOKING_CONFIG.notesMaxLength} characters`),
+  phone: phoneSchema,
+  email: emailSchema,
+})
+export type BookingDetailsFormValues = z.infer<typeof bookingDetailsSchema>
