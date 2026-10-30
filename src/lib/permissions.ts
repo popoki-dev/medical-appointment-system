@@ -16,6 +16,8 @@ export type Permission =
   | 'doctors:browse'
   | 'appointments:book'
   | 'appointments:view-own'
+  | 'medical-info:view-own'
+  | 'notifications:view-own'
   | 'appointments:view-assigned'
   | 'schedule:manage-own'
   | 'doctors:view-availability'
@@ -28,7 +30,15 @@ export type Permission =
   | 'settings:manage'
 
 export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
-  patient: ['dashboard:patient', 'doctors:browse', 'appointments:book', 'appointments:view-own', 'profile:manage'],
+  patient: [
+    'dashboard:patient',
+    'doctors:browse',
+    'appointments:book',
+    'appointments:view-own',
+    'medical-info:view-own',
+    'notifications:view-own',
+    'profile:manage',
+  ],
   doctor: ['dashboard:doctor', 'appointments:view-assigned', 'schedule:manage-own', 'profile:manage'],
   receptionist: ['dashboard:reception', 'patients:manage', 'appointments:manage', 'doctors:view-availability', 'profile:manage'],
   admin: [
@@ -94,7 +104,10 @@ export const ROUTE_PERMISSIONS: ReadonlyArray<readonly [pattern: string, permiss
   [ROUTES.patient.doctors, 'doctors:browse'],
   [ROUTES.patient.book, 'appointments:book'],
   [ROUTES.patient.appointments, 'appointments:view-own'],
+  [ROUTES.patient.medical, 'medical-info:view-own'],
+  [ROUTES.patient.notifications, 'notifications:view-own'],
   [ROUTES.patient.profile, 'profile:manage'],
+  [ROUTES.patient.settings, 'profile:manage'],
   [ROUTES.doctor.dashboard, 'dashboard:doctor'],
   [ROUTES.doctor.appointments, 'appointments:view-assigned'],
   [ROUTES.doctor.appointmentDetails(':appointmentId'), 'appointments:view-assigned'],

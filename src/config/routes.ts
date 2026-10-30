@@ -15,7 +15,10 @@ export const ROUTES = {
     doctors: '/patient/doctors',
     book: '/patient/book',
     appointments: '/patient/appointments',
+    medical: '/patient/medical',
+    notifications: '/patient/notifications',
     profile: '/patient/profile',
+    settings: '/patient/settings',
   },
   doctor: {
     root: '/doctor',

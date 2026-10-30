@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils'
 import { notificationService } from '@/services'
 import type { NotificationType } from '@/types'
 
-const TYPE_ICON: Record<NotificationType, { icon: typeof Bell; className: string }> = {
+export const NOTIFICATION_TYPE_ICON: Record<NotificationType, { icon: typeof Bell; className: string }> = {
   appointment: { icon: CalendarCheck, className: 'bg-primary/10 text-primary' },
   reminder: { icon: Clock, className: 'bg-secondary/10 text-secondary' },
   system: { icon: Info, className: 'bg-slate-100 text-slate-600' },
@@ -59,7 +59,7 @@ export function NotificationMenu() {
           ) : (
             <ul className="divide-y">
               {notifications.map((n) => {
-                const { icon: Icon, className } = TYPE_ICON[n.type]
+                const { icon: Icon, className } = NOTIFICATION_TYPE_ICON[n.type]
                 return (
                   <li key={n.id}>
                     <button
