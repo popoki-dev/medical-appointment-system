@@ -1,17 +1,44 @@
-import { generateMockNotifications } from '@/data'
 import type { AppNotification } from '@/types'
-import { LocalCollection } from './mockClient'
+import { createRepository, delay, type CreateInput } from './repository'
+import { storageService } from './storageService'
 
-const notifications = new LocalCollection<AppNotification>('notifications', () => generateMockNotifications())
+const repo = createRepository('notifications', { idPrefix: 'ntf' })
+
+export type NotifyInput = Omit<CreateInput<AppNotification>, 'isRead' | 'createdAt'>
 
 export const notificationService = {
-  listForUser: (userId: string) =>
-    notifications
-      .list((n) => n.userId === userId)
-      .then((items) => [...items].sort((a, b) => b.createdAt.localeCompare(a.createdAt))),
-  markAsRead: (id: string) => notifications.update(id, { read: true }),
-  async markAllAsRead(userId: string) {
-    const unread = await notifications.list((n) => n.userId === userId && !n.read)
-    await Promise.all(unread.map((n) => notifications.update(n.id, { read: true })))
+  getAll: repo.getAll,
+  getById: repo.getById,
+
+  getAllForUser: (userId: string) =>
+    repo
+      .getAll((n) => n.userId === userId)
+      .then((items) => items.sort((a, b) => b.createdAt.localeCompare(a.createdAt))),
+
+  create: (input: NotifyInput) => repo.create({ ...input, isRead: false, createdAt: new Date().toISOString() }),
+
+  /** Fire-and-forget notification used by other services; skips the simulated latency. */
+  notify(input: NotifyInput) {
+    storageService.insert('notifications', {
+      ...input,
+      id: `ntf_${crypto.randomUUID()}`,
+      isRead: false,
+      createdAt: new Date().toISOString(),
+    })
   },
+
+  update: (id: string, patch: Partial<Omit<AppNotification, 'id'>>) => repo.update(id, patch),
+  markAsRead: (id: string) => repo.update(id, { isRead: true }),
+
+  async markAllAsRead(userId: string) {
+    await delay()
+    const items = storageService.getAll('notifications')
+    if (!items.some((n) => n.userId === userId && !n.isRead)) return
+    storageService.setAll(
+      'notifications',
+      items.map((n) => (n.userId === userId ? { ...n, isRead: true } : n)),
+    )
+  },
+
+  delete: repo.delete,
 }

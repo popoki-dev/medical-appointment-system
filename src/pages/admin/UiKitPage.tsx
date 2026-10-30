@@ -28,12 +28,10 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { APPOINTMENT_STATUS_META } from '@/config/status'
-import { mockDoctors } from '@/data'
 import { useAppointments } from '@/hooks/useAppointments'
-import { useAsync } from '@/hooks/useAsync'
+import { useDoctors, useDoctorSchedules, useAvailableSlots } from '@/hooks/useDoctors'
 import { useDisclosure } from '@/hooks/useDisclosure'
 import { toDateKey } from '@/lib/date'
-import { appointmentService } from '@/services'
 import type { AppointmentStatus, SelectOption } from '@/types'
 
 const STATUS_OPTIONS: SelectOption<AppointmentStatus>[] = (Object.keys(APPOINTMENT_STATUS_META) as AppointmentStatus[]).map(
@@ -77,12 +75,10 @@ export function UiKitPage() {
   const modal = useDisclosure()
   const confirm = useDisclosure()
 
-  const doctor = mockDoctors[0]
-  const dateKey = date ? toDateKey(date) : ''
-  const { data: slots = [], isLoading: slotsLoading } = useAsync(
-    () => (dateKey ? appointmentService.getAvailableSlots(doctor, dateKey) : Promise.resolve([])),
-    [dateKey],
-  )
+  const { data: doctors = [] } = useDoctors({ status: 'active' })
+  const doctor = doctors[0]
+  const { data: schedules = [] } = useDoctorSchedules(doctor?.id)
+  const { data: slots = [], isLoading: slotsLoading } = useAvailableSlots(doctor?.id, date ? toDateKey(date) : undefined)
 
   const { data: appointments = [], isLoading } = useAppointments()
   const filtered = useMemo(
@@ -161,9 +157,9 @@ export function UiKitPage() {
                     <SelectValue placeholder="Choose a doctor" />
                   </SelectTrigger>
                   <SelectContent>
-                    {mockDoctors.map((d) => (
+                    {doctors.map((d) => (
                       <SelectItem key={d.id} value={d.id}>
-                        {d.name} — {d.specialization}
+                        {d.fullName} — {d.specialization}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -202,7 +198,7 @@ export function UiKitPage() {
           </form>
         </Section>
 
-        <Section title="Date & time slot picker" description={`Live availability for ${doctor.name}.`}>
+        <Section title="Date & time slot picker" description={doctor ? `Live availability for ${doctor.fullName}.` : undefined}>
           <div className="space-y-5">
             <DatePicker
               value={date}
@@ -210,7 +206,7 @@ export function UiKitPage() {
                 setDate(d)
                 setTime(undefined)
               }}
-              disabled={[{ before: new Date() }, (d) => !doctor.workingHours.some((h) => h.day === getDay(d))]}
+              disabled={[{ before: new Date() }, (d) => !schedules.some((s) => s.isAvailable && s.dayOfWeek === getDay(d))]}
             />
             <TimeSlotPicker slots={slots} value={time} onChange={setTime} loading={slotsLoading} />
           </div>
@@ -220,7 +216,7 @@ export function UiKitPage() {
       <Section title="Data table" description="Sortable columns, search, filters, pagination, loading and empty states.">
         <DataTable
           className="shadow-none"
-          columns={appointmentColumns(['patient', 'doctor', 'date', 'time', 'type', 'status'])}
+          columns={appointmentColumns(['number', 'patient', 'doctor', 'date', 'time', 'status', 'payment'])}
           data={filtered}
           getRowId={(a) => a.id}
           loading={isLoading}

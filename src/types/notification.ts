@@ -6,7 +6,6 @@ export interface AppNotification {
   title: string
   message: string
   type: NotificationType
-  read: boolean
-  link?: string
+  isRead: boolean
   createdAt: string
 }

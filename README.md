@@ -21,7 +21,7 @@ Sign in from `/login` with a one-click demo role, or with these credentials (pas
 | Receptionist | reception@medibook.example |
 | Admin        | admin@medibook.example     |
 
-To reset the demo data, clear the `medibook:*` keys in localStorage.
+To restore the original dataset, choose **Reset demo data** from the user menu in any portal.
 
 ## Project structure
 
@@ -39,19 +39,58 @@ src/
 │   └── appointments/  Domain-specific building blocks
 ├── contexts/          AuthContext
 ├── hooks/             useAuth, useAsync, useAppointments, useDebounce, usePagination, …
-├── services/          Async domain services over a localStorage "mock client"
-├── data/              Seed data
+├── services/          storageService, generic repository and domain services
+├── data/              mockData.ts — the single seed dataset
 ├── config/            App config, route constants, navigation, status metadata
 ├── lib/               utils, date/format helpers, storage, toast, Zod schemas
 └── types/             TypeScript interfaces for every entity
 ```
 
+## Data layer
+
+All screens share one dataset, stored in localStorage under `medibook:db:*`.
+
+| Collection        | Seeded records                                  |
+| ----------------- | ----------------------------------------------- |
+| `users`           | 35 (20 patients, 10 doctors, 3 receptionists, 2 admins) |
+| `patients`        | 20                                              |
+| `departments`     | 4                                               |
+| `doctors`         | 10                                              |
+| `doctorSchedules` | 42 (every doctor's working days)                |
+| `appointments`    | 34, from three weeks ago to two weeks ahead     |
+| `notifications`   | 17                                              |
+
+```
+Screen ──> hook (useAppointments, useDoctors, …)
+             │  re-fetches automatically when watched collections change
+             ▼
+         domain service (appointmentService, doctorService, …)
+             │  business rules: availability, clashes, notifications, guards
+             ▼
+         repository   getAll · getById · create · update · delete
+             │  unique ids, duplicate checks, simulated latency
+             ▼
+         storageService ──> localStorage
+             seeds on first launch · emits change events · reset()
+```
+
+- **Seeding.** `storageService.initialize()` runs in `main.tsx`. On first launch, or when
+  `DB_VERSION` changes, it writes `createMockDatabase()` from `src/data/mockData.ts`.
+  Appointment dates are generated relative to the day of seeding.
+- **One source of truth.** Screens never import seed data. They read through the hooks,
+  which subscribe to `storageService`. A booking made in one portal shows up in the
+  others straight away, in the same tab or in another tab.
+- **Integrity.** Every create and update rejects duplicate ids, emails, patient, doctor
+  and appointment numbers, department names and per-day schedules. Bookings must
+  fit the doctor's schedule (breaks excluded) and must not clash for the doctor or the patient.
+  Deletes are refused while other records still depend on them.
+- **Reset.** `storageService.reset()` restores the original dataset and keeps the session.
+- **Demo-only credentials.** Passwords are stored in plain text for the demo.
+
 ### Backend readiness
 
-Pages and hooks only call `src/services/*`. Each service talks to a `LocalCollection`
-(`services/mockClient.ts`) that mimics an async REST resource with simulated latency.
-To integrate a real API, re-implement the service methods with `fetch`/axios. Their
-signatures and the rest of the app stay unchanged.
+Pages and hooks only call `src/services/*`. To integrate a real API, re-implement the
+repository and service methods with `fetch`/axios. Their signatures stay the same.
 
 ### Reusable components
 

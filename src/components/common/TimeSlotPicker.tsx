@@ -35,7 +35,7 @@ export function TimeSlotPicker({
   return (
     <div className={cn('space-y-5', className)} role="radiogroup" aria-label="Available time slots">
       {PERIODS.map(({ key, label, icon: Icon }) => {
-        const group = slots.filter((s) => getDayPeriod(s.time) === key)
+        const group = slots.filter((s) => getDayPeriod(s.startTime) === key)
         if (!group.length) return null
         return (
           <div key={key} className="space-y-2">
@@ -48,15 +48,15 @@ export function TimeSlotPicker({
             </div>
             <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6">
               {group.map((slot) => {
-                const selected = slot.time === value
+                const selected = slot.startTime === value
                 return (
                   <button
-                    key={slot.time}
+                    key={slot.startTime}
                     type="button"
                     role="radio"
                     aria-checked={selected}
                     disabled={!slot.available}
-                    onClick={() => onChange(slot.time)}
+                    onClick={() => onChange(slot.startTime)}
                     className={cn(
                       'h-10 rounded-lg border text-sm font-medium tabular-nums transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1',
                       selected
@@ -65,7 +65,7 @@ export function TimeSlotPicker({
                       !slot.available && 'cursor-not-allowed border-dashed bg-muted/50 text-muted-foreground/60 line-through hover:border-input hover:bg-muted/50 hover:text-muted-foreground/60',
                     )}
                   >
-                    {formatTime(slot.time)}
+                    {formatTime(slot.startTime)}
                   </button>
                 )
               })}

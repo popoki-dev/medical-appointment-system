@@ -8,24 +8,26 @@ import { StatCard } from '@/components/common/StatCard'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ROUTES } from '@/config/routes'
-import { useAsync } from '@/hooks/useAsync'
 import { useAppointments } from '@/hooks/useAppointments'
 import { useAuth } from '@/hooks/useAuth'
+import { usePatientByUserId } from '@/hooks/usePatients'
 import { formatDate, formatTime, toDateKey } from '@/lib/date'
-import { patientService } from '@/services'
 
 export function PatientDashboardPage() {
   const { user } = useAuth()
-  const { data: patient } = useAsync(() => patientService.getByUserId(user!.id), [user?.id])
-  const { data: appointments = [], isLoading: appointmentsLoading } = useAppointments({ patientId: patient?.id ?? '__none__' })
+  const { data: patient } = usePatientByUserId(user?.id)
+  const { data: appointments = [], isLoading: appointmentsLoading } = useAppointments(
+    { patientId: patient?.id },
+    { enabled: !!patient },
+  )
   const isLoading = appointmentsLoading || patient === undefined
 
   const today = toDateKey(new Date())
-  const { upcoming, completed, cancelled } = useMemo(
+  const { upcoming, completed, missed } = useMemo(
     () => ({
-      upcoming: appointments.filter((a) => a.date >= today && ['pending', 'confirmed', 'checked-in'].includes(a.status)),
+      upcoming: appointments.filter((a) => a.appointmentDate >= today && (a.status === 'pending' || a.status === 'confirmed')),
       completed: appointments.filter((a) => a.status === 'completed'),
-      cancelled: appointments.filter((a) => a.status === 'cancelled' || a.status === 'no-show'),
+      missed: appointments.filter((a) => ['cancelled', 'rejected', 'no-show'].includes(a.status)),
     }),
     [appointments, today],
   )
@@ -34,8 +36,8 @@ export function PatientDashboardPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title={`Hello, ${user?.name.split(' ')[0]}`}
-        description="Here's an overview of your care."
+        title={`Hello, ${user?.fullName.split(' ')[0]}`}
+        description={patient ? `Patient no. ${patient.patientNumber}` : "Here's an overview of your care."}
         actions={
           <Button asChild>
             <Link to={ROUTES.patient.book}>
@@ -46,13 +48,13 @@ export function PatientDashboardPage() {
       />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <StatCard title="Upcoming" value={upcoming.length} icon={CalendarClock} loading={isLoading} description="Scheduled visits" />
+        <StatCard title="Upcoming" value={upcoming.length} icon={CalendarClock} loading={isLoading} description="Pending or confirmed" />
         <StatCard title="Completed" value={completed.length} icon={CheckCircle2} tone="teal" loading={isLoading} description="Past visits" />
-        <StatCard title="Cancelled / missed" value={cancelled.length} icon={XCircle} tone="rose" loading={isLoading} description="All time" />
+        <StatCard title="Cancelled / missed" value={missed.length} icon={XCircle} tone="rose" loading={isLoading} description="All time" />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-1">
+        <Card>
           <CardHeader>
             <CardTitle>Next appointment</CardTitle>
           </CardHeader>
@@ -60,14 +62,16 @@ export function PatientDashboardPage() {
             {next ? (
               <div className="space-y-4">
                 <div className="rounded-lg bg-accent p-4">
-                  <p className="text-sm font-medium text-accent-foreground">{formatDate(next.date, 'EEEE, MMM d')}</p>
+                  <p className="text-sm font-medium text-accent-foreground">{formatDate(next.appointmentDate, 'EEEE, MMM d')}</p>
                   <p className="mt-1 flex items-center gap-1.5 text-2xl font-semibold tabular-nums">
-                    <Clock className="h-5 w-5 text-primary" /> {formatTime(next.time)}
+                    <Clock className="h-5 w-5 text-primary" /> {formatTime(next.startTime)}
                   </p>
                 </div>
                 <div className="text-sm">
                   <p className="font-medium">{next.doctorName}</p>
-                  <p className="text-muted-foreground">{next.reason}</p>
+                  <p className="text-muted-foreground">
+                    {next.departmentName} · {next.reason}
+                  </p>
                 </div>
               </div>
             ) : (
@@ -82,7 +86,7 @@ export function PatientDashboardPage() {
         <div className="min-w-0 space-y-3 lg:col-span-2">
           <h2 className="text-base font-semibold">Upcoming appointments</h2>
           <DataTable
-            columns={appointmentColumns(['doctor', 'date', 'time', 'type', 'status'])}
+            columns={appointmentColumns(['doctor', 'department', 'date', 'time', 'status'])}
             data={upcoming}
             getRowId={(a) => a.id}
             loading={isLoading}

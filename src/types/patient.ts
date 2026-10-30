@@ -7,18 +7,16 @@ export interface EmergencyContact {
   phone: string
 }
 
+/** Patient profile. Name, email and phone live on the linked `User`. */
 export interface Patient {
   id: string
   userId: string
-  firstName: string
-  lastName: string
-  email: string
-  phone: string
-  dateOfBirth: string
+  patientNumber: string
+  dateOfBirth: string // "yyyy-MM-dd"
   gender: Gender
-  bloodGroup?: BloodGroup
-  address?: string
-  allergies?: string[]
-  emergencyContact?: EmergencyContact
-  createdAt: string
+  bloodGroup: BloodGroup
+  address: string
+  emergencyContact: EmergencyContact
+  /** Mock only — not real clinical data. */
+  medicalNotes?: string
 }
