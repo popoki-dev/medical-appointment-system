@@ -117,9 +117,10 @@ export const ROUTE_PERMISSIONS: ReadonlyArray<readonly [pattern: string, permiss
 ]
 
 /** Whether a role may open a URL: it must be inside the role's portal and pass that page's permission. */
-export function canAccessPath(subject: Subject, pathname: string): boolean {
+export function canAccessPath(subject: Subject, path: string): boolean {
   const role = roleOf(subject)
   if (!role) return false
+  const pathname = path.split(/[?#]/)[0]
   const portal = ROLE_PORTAL[role]
   if (pathname !== portal && !pathname.startsWith(`${portal}/`)) return false
   const rule = ROUTE_PERMISSIONS.find(([pattern]) => matchPath(pattern, pathname))

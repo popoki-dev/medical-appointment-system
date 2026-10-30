@@ -90,6 +90,26 @@ Screen ──> hook (useAppointments, useDoctors, …)
 - **Reset.** `storageService.reset()` restores the original dataset and keeps the session.
 - **Demo-only credentials.** Passwords are stored in plain text for the demo.
 
+## Public website
+
+| Route              | Page                                                                                   |
+| ------------------ | -------------------------------------------------------------------------------------- |
+| `/`                | Home: hero, live statistics, departments, top-rated doctors, why choose us, hospital info |
+| `/doctors`         | Doctor directory with name search and department, specialization and availability filters |
+| `/doctors/:id`     | Doctor profile: biography, qualifications, languages, fee, weekly schedule, open slots  |
+| `/departments`     | Department cards with doctor counts and links to each department's doctors              |
+| `/about`           | Hospital introduction, values and milestones                                            |
+| `/contact`         | Address, phone, email, opening hours and a map placeholder (no contact form)            |
+
+Everything on these pages comes from the shared mock data. The only exception is the fictional hospital details
+in `src/config/hospital.ts`. Directory filters are kept in the URL (for example
+`/doctors?department=dep_001&availability=today`), so the department cards link to a filtered list.
+
+Every "Book" button opens the booking flow at `/patient/book`, filled in from the button:
+`ROUTES.patient.bookWith({ departmentId, doctorId, date, time })`. Signed-out visitors sign in or register
+first and then return to the booking with their choice kept. The flow checks the doctor's live free slots,
+records the request as `pending`, and notifies the doctor and the patient.
+
 ## Authentication and access control
 
 Authentication is a frontend-only mock. It is not secure and must not be used for real data.
@@ -108,7 +128,7 @@ Each role has its own portal:
 
 | Role          | Pages                                                                                       |
 | ------------- | ------------------------------------------------------------------------------------------- |
-| Patient       | Dashboard, Find a Doctor, Book Appointment, My Appointments, Profile Settings               |
+| Patient       | Dashboard, Find a Doctor, Book Appointment (built), My Appointments, Profile Settings       |
 | Doctor        | Dashboard, My Appointments, Appointment Details, My Schedule, Profile Settings              |
 | Receptionist  | Dashboard, Patients, Appointments, Doctor Availability, Profile Settings                    |
 | Administrator | Dashboard, Users, Doctors, Departments, Patients, Appointments, Reports, System Settings     |
@@ -138,5 +158,5 @@ They are all demonstrated live at **Admin → UI Kit** (`/admin/ui-kit`).
 ## Status
 
 The design system, layouts, reusable components, data layer, mock authentication, role-based
-routing and role dashboards are in place. Every other module route is wired up with a "coming soon" placeholder,
+routing, the public website, the patient booking flow and the role dashboards are in place. Every other module route is wired up with a "coming soon" placeholder,
 ready for its screens to be built.
