@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
-import { Mail, MapPin, Menu, Phone } from 'lucide-react'
+import { Clock, Mail, MapPin, Menu, Phone, Siren } from 'lucide-react'
 import { Logo } from '@/components/layout/Logo'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet'
-import { APP_CONFIG } from '@/config/app'
+import { HOSPITAL, telHref } from '@/config/hospital'
 import { PUBLIC_NAVIGATION } from '@/config/navigation'
 import { ROLE_HOME, ROUTES } from '@/config/routes'
 import { useAuth } from '@/hooks/useAuth'
@@ -29,7 +29,7 @@ export function PublicLayout() {
         <Link to={ROUTES.login}>Sign in</Link>
       </Button>
       <Button asChild>
-        <Link to={ROUTES.register}>Book appointment</Link>
+        <Link to={ROUTES.patient.bookWith()}>Book appointment</Link>
       </Button>
     </>
   )
@@ -74,40 +74,82 @@ export function PublicLayout() {
       </main>
 
       <footer className="border-t bg-card">
-        <div className="container grid gap-8 py-10 md:grid-cols-4">
-          <div className="space-y-3 md:col-span-2">
+        <div className="container grid gap-8 py-12 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1.3fr]">
+          <div className="space-y-3">
             <Logo />
             <p className="max-w-sm text-sm text-muted-foreground">
-              {APP_CONFIG.hospitalName}. Compassionate care, booked in minutes.
+              {HOSPITAL.name}. Specialist care for Springfield since {HOSPITAL.founded}, with appointments you can book online
+              at any time.
             </p>
+            <a href={telHref(HOSPITAL.emergencyPhone)} className="inline-flex items-center gap-2 text-sm font-medium text-red-600 hover:text-red-700">
+              <Siren className="h-4 w-4" /> Emergency: {HOSPITAL.emergencyPhone}
+            </a>
           </div>
-          <div className="space-y-3">
-            <p className="text-sm font-semibold">Explore</p>
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              {PUBLIC_NAVIGATION.map((item) => (
-                <li key={item.href}>
-                  <Link to={item.href} className="hover:text-primary">
-                    {item.title}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
+          <FooterLinks title="Explore" links={PUBLIC_NAVIGATION} />
+          <FooterLinks
+            title="Patients"
+            links={[
+              { title: 'Book an appointment', href: ROUTES.patient.bookWith() },
+              { title: 'Find a doctor', href: ROUTES.doctors },
+              { title: 'Create an account', href: ROUTES.register },
+              { title: 'Sign in', href: ROUTES.login },
+            ]}
+          />
           <div className="space-y-3">
             <p className="text-sm font-semibold">Contact</p>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li className="flex items-center gap-2"><MapPin className="h-4 w-4" /> 120 Harbor Ave, Springfield</li>
-              <li className="flex items-center gap-2"><Phone className="h-4 w-4" /> +1 (555) 010-2000</li>
-              <li className="flex items-center gap-2"><Mail className="h-4 w-4" /> {APP_CONFIG.supportEmail}</li>
+              <li className="flex items-start gap-2">
+                <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>
+                  {HOSPITAL.address.line1}, {HOSPITAL.address.line2}
+                </span>
+              </li>
+              <li>
+                <a href={telHref(HOSPITAL.phone)} className="flex items-center gap-2 hover:text-primary">
+                  <Phone className="h-4 w-4" /> {HOSPITAL.phone}
+                </a>
+              </li>
+              <li>
+                <a href={`mailto:${HOSPITAL.email}`} className="flex items-center gap-2 hover:text-primary">
+                  <Mail className="h-4 w-4" /> {HOSPITAL.email}
+                </a>
+              </li>
+              <li className="flex items-start gap-2">
+                <Clock className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>
+                  {HOSPITAL.openingHours.map((row) => (
+                    <span key={row.days} className="block">
+                      {row.days}: {row.hours}
+                    </span>
+                  ))}
+                </span>
+              </li>
             </ul>
           </div>
         </div>
         <div className="border-t">
           <p className="container py-4 text-xs text-muted-foreground">
-            © {new Date().getFullYear()} {APP_CONFIG.name}. Demo application — not for clinical use.
+            © {new Date().getFullYear()} {HOSPITAL.name}. A fictional hospital — demo application, not for clinical use.
           </p>
         </div>
       </footer>
+    </div>
+  )
+}
+
+function FooterLinks({ title, links }: { title: string; links: { title: string; href: string }[] }) {
+  return (
+    <div className="space-y-3">
+      <p className="text-sm font-semibold">{title}</p>
+      <ul className="space-y-2 text-sm text-muted-foreground">
+        {links.map((link) => (
+          <li key={link.href}>
+            <Link to={link.href} className="hover:text-primary">
+              {link.title}
+            </Link>
+          </li>
+        ))}
+      </ul>
     </div>
   )
 }

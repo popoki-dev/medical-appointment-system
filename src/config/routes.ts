@@ -1,10 +1,19 @@
 import type { UserRole } from '@/types'
 
+export interface BookingPrefill {
+  departmentId?: string
+  doctorId?: string
+  date?: string // "yyyy-MM-dd"
+  time?: string // "HH:mm"
+}
+
 export const ROUTES = {
   home: '/',
   doctors: '/doctors',
+  doctorProfile: (id: string) => `/doctors/${id}`,
   departments: '/departments',
   about: '/about',
+  contact: '/contact',
   login: '/login',
   register: '/register',
   forgotPassword: '/forgot-password',
@@ -14,6 +23,12 @@ export const ROUTES = {
     dashboard: '/patient/dashboard',
     doctors: '/patient/doctors',
     book: '/patient/book',
+    /** The booking flow, optionally pre-filled with a department, doctor, date and time. */
+    bookWith: (params: BookingPrefill = {}) => {
+      const query = new URLSearchParams(Object.entries(params).filter((entry): entry is [string, string] => !!entry[1]))
+      const search = query.toString()
+      return search ? `/patient/book?${search}` : '/patient/book'
+    },
     appointments: '/patient/appointments',
     profile: '/patient/profile',
   },

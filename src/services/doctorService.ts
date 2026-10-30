@@ -1,4 +1,4 @@
-import { format, getDay } from 'date-fns'
+import { addDays, format, getDay } from 'date-fns'
 import { fromDateKey, toDateKey } from '@/lib/date'
 import { buildScheduleSlots, timesOverlap } from '@/lib/schedule'
 import type { Doctor, DoctorSchedule, DoctorStatus, TimeSlot, User } from '@/types'
@@ -21,6 +21,40 @@ const scheduleRepo = createRepository('doctorSchedules', {
 
 /** Appointment statuses that keep a time slot occupied. */
 export const SLOT_BLOCKING_STATUSES = ['pending', 'confirmed', 'completed'] as const
+
+export interface DoctorAvailability {
+  /** The first free slot in the window, or null when fully booked or not working. */
+  next: { date: string; startTime: string } | null
+  /** Number of free slots per date ("yyyy-MM-dd"). */
+  freeByDate: Record<string, number>
+}
+
+function computeSlots(doctorId: string, date: string, excludeAppointmentId?: string): TimeSlot[] {
+  const doctor = storageService.getById('doctors', doctorId)
+  if (!doctor || doctor.status !== 'active') return []
+  const weekday = getDay(fromDateKey(date))
+  const schedule = storageService.getAll('doctorSchedules').find((s) => s.doctorId === doctorId && s.dayOfWeek === weekday)
+  if (!schedule) return []
+
+  const booked = storageService
+    .getAll('appointments')
+    .filter(
+      (a) =>
+        a.doctorId === doctorId &&
+        a.appointmentDate === date &&
+        a.id !== excludeAppointmentId &&
+        (SLOT_BLOCKING_STATUSES as readonly string[]).includes(a.status),
+    )
+  // Slots that have already started today can't be booked; past days have none.
+  const now = new Date()
+  const today = toDateKey(now)
+  if (date < today) return buildScheduleSlots(schedule).map((slot) => ({ ...slot, available: false }))
+  const cutoff = date === today ? format(now, 'HH:mm') : null
+  return buildScheduleSlots(schedule).map((slot) => ({
+    ...slot,
+    available: (!cutoff || slot.startTime > cutoff) && !booked.some((a) => timesOverlap(slot, a)),
+  }))
+}
 
 export interface DoctorFilters {
   departmentId?: string
@@ -113,27 +147,27 @@ export const doctorService = {
    */
   async getAvailableSlots(doctorId: string, date: string, options: { excludeAppointmentId?: string } = {}): Promise<TimeSlot[]> {
     await delay()
-    const doctor = storageService.getById('doctors', doctorId)
-    if (!doctor || doctor.status !== 'active') return []
-    const weekday = getDay(fromDateKey(date))
-    const schedule = storageService.getAll('doctorSchedules').find((s) => s.doctorId === doctorId && s.dayOfWeek === weekday)
-    if (!schedule) return []
+    return computeSlots(doctorId, date, options.excludeAppointmentId)
+  },
 
-    const booked = storageService
-      .getAll('appointments')
-      .filter(
-        (a) =>
-          a.doctorId === doctorId &&
-          a.appointmentDate === date &&
-          a.id !== options.excludeAppointmentId &&
-          (SLOT_BLOCKING_STATUSES as readonly string[]).includes(a.status),
-      )
-    // Slots that have already started today can't be booked.
-    const now = new Date()
-    const cutoff = date === toDateKey(now) ? format(now, 'HH:mm') : null
-    return buildScheduleSlots(schedule).map((slot) => ({
-      ...slot,
-      available: (!cutoff || slot.startTime > cutoff) && !booked.some((a) => timesOverlap(slot, a)),
-    }))
+  /**
+   * Free-slot counts per day for the next `days` days (today included), and the first
+   * free slot, for each doctor. Used by the directory's availability filter and badges.
+   */
+  async getAvailability(doctorIds: string[], { days = 14 }: { days?: number } = {}): Promise<Record<string, DoctorAvailability>> {
+    await delay()
+    const dates = Array.from({ length: days }, (_, i) => toDateKey(addDays(new Date(), i)))
+    return Object.fromEntries(
+      doctorIds.map((doctorId) => {
+        const freeByDate: Record<string, number> = {}
+        let next: DoctorAvailability['next'] = null
+        for (const date of dates) {
+          const free = computeSlots(doctorId, date).filter((slot) => slot.available)
+          freeByDate[date] = free.length
+          if (!next && free.length) next = { date, startTime: free[0].startTime }
+        }
+        return [doctorId, { next, freeByDate }]
+      }),
+    )
   },
 }
