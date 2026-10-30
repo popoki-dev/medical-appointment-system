@@ -1,6 +1,8 @@
 import { APP_CONFIG } from '@/config/app'
 
-const key = (name: string) => `${APP_CONFIG.storagePrefix}${name}`
+/** The full localStorage key for an app-owned entry, e.g. to match `storage` events. */
+export const storageKey = (name: string) => `${APP_CONFIG.storagePrefix}${name}`
+const key = storageKey
 
 /** Thin, exception-safe wrapper around localStorage with JSON (de)serialisation. */
 export const storage = {

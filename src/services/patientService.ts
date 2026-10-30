@@ -47,7 +47,12 @@ export const patientService = {
   async register({ fullName, email, phone, password, ...profile }: RegisterPatientInput) {
     const user = await userService.create({ fullName, email, phone, password, role: 'patient' })
     const patientNumber = nextSequence(storageService.getAll('patients').map((p) => p.patientNumber), 'PAT-', 5)
-    return repo.create({ ...profile, userId: user.id, patientNumber })
+    try {
+      return await repo.create({ ...profile, userId: user.id, patientNumber })
+    } catch (error) {
+      storageService.remove('users', user.id) // don't leave an account without a profile
+      throw error
+    }
   },
 
   create: (input: Omit<CreateInput<Patient>, 'patientNumber'>) =>

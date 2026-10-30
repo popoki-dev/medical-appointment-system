@@ -12,14 +12,17 @@ npm run build      # type-check + production build
 npm run typecheck
 ```
 
-Sign in from `/login` with a one-click demo role, or with these credentials (password `password123`):
+Sign in at `/login`. Every demo account uses the password `Demo123!`, and the login page
+can sign you in to any of them in one click:
 
-| Role         | Email                      |
-| ------------ | -------------------------- |
-| Patient      | patient@medibook.example   |
-| Doctor       | doctor@medibook.example    |
-| Receptionist | reception@medibook.example |
-| Admin        | admin@medibook.example     |
+| Role          | Email                      |
+| ------------- | -------------------------- |
+| Administrator | admin@hospital.demo        |
+| Receptionist  | receptionist@hospital.demo |
+| Doctor        | doctor@hospital.demo       |
+| Patient       | patient@hospital.demo      |
+
+New patients can create an account at `/register`.
 
 To restore the original dataset, choose **Reset demo data** from the user menu in any portal.
 
@@ -87,6 +90,39 @@ Screen ──> hook (useAppointments, useDoctors, …)
 - **Reset.** `storageService.reset()` restores the original dataset and keeps the session.
 - **Demo-only credentials.** Passwords are stored in plain text for the demo.
 
+## Authentication and access control
+
+Authentication is a frontend-only mock. It is not secure and must not be used for real data.
+
+- **Sign-in** checks the email and password against the `users` collection. Only `active`
+  accounts can sign in. The session (`medibook:session`) stores the user id and an expiry
+  (8 hours), so you stay signed in after a refresh. Signing in or out applies to every open tab.
+- **Registration** (`/register`) creates a `users` record and a `patients` record, signs the new
+  patient in and opens the patient dashboard. Blood group, address and emergency contact stay empty
+  until the patient completes their profile.
+- **Forgot password** (`/forgot-password`) is a mock reset flow. Because no email is sent, the page
+  shows the 6-digit code. The code expires after 15 minutes or 5 wrong attempts.
+- **Remember me** is shown on the login page but has no effect yet.
+
+Each role has its own portal:
+
+| Role          | Pages                                                                                       |
+| ------------- | ------------------------------------------------------------------------------------------- |
+| Patient       | Dashboard, Find a Doctor, Book Appointment, My Appointments, Profile Settings               |
+| Doctor        | Dashboard, My Appointments, Appointment Details, My Schedule, Profile Settings              |
+| Receptionist  | Dashboard, Patients, Appointments, Doctor Availability, Profile Settings                    |
+| Administrator | Dashboard, Users, Doctors, Departments, Patients, Appointments, Reports, System Settings     |
+
+`src/lib/permissions.ts` lists each role's permissions (`ROLE_PERMISSIONS`) and the permission
+every page needs (`ROUTE_PERMISSIONS`). It exports `hasPermission`, `hasRole`, `canAccess` and
+`canAccessPath`. `<ProtectedRoute roles={…} permission={…}>` guards each portal and each page:
+
+- If you are signed out, it sends you to `/login`. After you sign in it returns you to the page
+  you asked for, if your role may open it.
+- If your role may not open the page, it sends you to your own dashboard with a notice.
+
+`<GuestRoute>` sends signed-in users away from the login, registration and reset pages.
+
 ### Backend readiness
 
 Pages and hooks only call `src/services/*`. To integrate a real API, re-implement the
@@ -101,6 +137,6 @@ They are all demonstrated live at **Admin → UI Kit** (`/admin/ui-kit`).
 
 ## Status
 
-The design system, layouts, reusable components, routing, auth guards and role dashboards
-are in place. Every other module route is wired up with a "coming soon" placeholder,
+The design system, layouts, reusable components, data layer, mock authentication, role-based
+routing and role dashboards are in place. Every other module route is wired up with a "coming soon" placeholder,
 ready for its screens to be built.

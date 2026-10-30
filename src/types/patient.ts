@@ -14,9 +14,10 @@ export interface Patient {
   patientNumber: string
   dateOfBirth: string // "yyyy-MM-dd"
   gender: Gender
-  bloodGroup: BloodGroup
+  /** Null until the patient completes their profile after self-registration. */
+  bloodGroup: BloodGroup | null
   address: string
-  emergencyContact: EmergencyContact
+  emergencyContact: EmergencyContact | null
   /** Mock only — not real clinical data. */
   medicalNotes?: string
 }
