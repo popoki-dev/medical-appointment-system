@@ -1,133 +1,142 @@
+import type { ReactNode } from 'react'
 import { createBrowserRouter, Navigate, type RouteObject } from 'react-router-dom'
 import type { RouteHandle } from '@/components/layout/AppBreadcrumbs'
-import { ROUTES } from '@/config/routes'
+import { ROLE_HOME } from '@/config/routes'
 import { AdminLayout, DoctorLayout, PatientLayout, PublicLayout, ReceptionistLayout } from '@/layouts'
 import { NotFoundPage } from '@/pages/errors/NotFoundPage'
 import { RouteErrorPage } from '@/pages/errors/RouteErrorPage'
-import { UnauthorizedPage } from '@/pages/errors/UnauthorizedPage'
+import { ForgotPasswordPage } from '@/pages/public/ForgotPasswordPage'
 import { HomePage } from '@/pages/public/HomePage'
 import { LoginPage } from '@/pages/public/LoginPage'
 import { RegisterPage } from '@/pages/public/RegisterPage'
 import { ComingSoonPage } from '@/pages/shared/ComingSoonPage'
+import type { Permission } from '@/lib/permissions'
+import type { UserRole } from '@/types'
 import { GuestRoute, ProtectedRoute } from './ProtectedRoute'
 import { lazyPage } from './lazyPage'
 
 const crumb = (label: string): RouteHandle => ({ crumb: label })
 
-/** A route whose screen is not built yet; shows a titled placeholder. */
-const placeholder = (path: string, title: string, description?: string): RouteObject => ({
+interface PageRoute {
+  path: string
+  title: string
+  permission: Permission
+  /** Omit for screens that are not built yet; a titled placeholder is shown. */
+  element?: ReactNode
+  description?: string
+}
+
+/** A portal page, guarded by the permission it needs on top of its portal's role check. */
+const page = ({ path, title, permission, element, description }: PageRoute): RouteObject => ({
   path,
   handle: crumb(title),
-  element: <ComingSoonPage title={title} description={description} />,
+  element: (
+    <ProtectedRoute permission={permission}>
+      {element ?? <ComingSoonPage title={title} description={description} />}
+    </ProtectedRoute>
+  ),
 })
+
+/** A role's portal: its layout behind a role check, with `/<role>` redirecting to the dashboard. */
+const portal = (role: UserRole, label: string, layout: ReactNode, children: RouteObject[]): RouteObject => ({
+  path: role,
+  handle: crumb(label),
+  element: <ProtectedRoute roles={[role]}>{layout}</ProtectedRoute>,
+  children: [{ index: true, element: <Navigate to={ROLE_HOME[role]} replace /> }, ...children],
+})
+
+const publicPage = (title: string, description: string) => (
+  <div className="container py-10">
+    <ComingSoonPage title={title} description={description} />
+  </div>
+)
 
 const publicRoutes: RouteObject = {
   element: <PublicLayout />,
   children: [
     { index: true, element: <HomePage /> },
-    { path: 'doctors', element: <div className="container py-10"><ComingSoonPage title="Find a doctor" description="Search our specialists by department and availability." /></div> },
-    { path: 'departments', element: <div className="container py-10"><ComingSoonPage title="Departments" description="Explore our clinical departments." /></div> },
-    { path: 'about', element: <div className="container py-10"><ComingSoonPage title="About us" description="Our mission, people and facilities." /></div> },
+    { path: 'doctors', element: publicPage('Find a doctor', 'Search our specialists by department and availability.') },
+    { path: 'departments', element: publicPage('Departments', 'Explore our clinical departments.') },
+    { path: 'about', element: publicPage('About us', 'Our mission, people and facilities.') },
     { path: 'login', element: <GuestRoute><LoginPage /></GuestRoute> },
     { path: 'register', element: <GuestRoute><RegisterPage /></GuestRoute> },
+    { path: 'forgot-password', element: <GuestRoute><ForgotPasswordPage /></GuestRoute> },
   ],
 }
 
-const patientRoutes: RouteObject = {
-  path: 'patient',
-  handle: crumb('Patient'),
-  element: (
-    <ProtectedRoute roles={['patient']}>
-      <PatientLayout />
-    </ProtectedRoute>
-  ),
-  children: [
-    { index: true, element: <Navigate to={ROUTES.patient.dashboard} replace /> },
-    {
-      path: 'dashboard',
-      handle: crumb('Dashboard'),
-      element: lazyPage(() => import('@/pages/patient/PatientDashboardPage'), 'PatientDashboardPage'),
-    },
-    placeholder('book', 'Book Appointment', 'Choose a department, doctor and time slot.'),
-    placeholder('appointments', 'My Appointments', 'View, reschedule or cancel your bookings.'),
-    placeholder('records', 'Medical Records', 'Visit summaries, prescriptions and lab results.'),
-    placeholder('profile', 'Profile', 'Personal details, emergency contacts and preferences.'),
-  ],
-}
+const patientRoutes = portal('patient', 'Patient', <PatientLayout />, [
+  page({
+    path: 'dashboard',
+    title: 'Dashboard',
+    permission: 'dashboard:patient',
+    element: lazyPage(() => import('@/pages/patient/PatientDashboardPage'), 'PatientDashboardPage'),
+  }),
+  page({ path: 'doctors', title: 'Find a Doctor', permission: 'doctors:browse', description: 'Browse doctors by department, specialty and availability.' }),
+  page({ path: 'book', title: 'Book Appointment', permission: 'appointments:book', description: 'Choose a department, doctor and time slot.' }),
+  page({ path: 'appointments', title: 'My Appointments', permission: 'appointments:view-own', description: 'View, reschedule or cancel your bookings.' }),
+  page({ path: 'profile', title: 'Profile Settings', permission: 'profile:manage', description: 'Personal details, emergency contact and password.' }),
+])
 
-const doctorRoutes: RouteObject = {
-  path: 'doctor',
-  handle: crumb('Doctor'),
-  element: (
-    <ProtectedRoute roles={['doctor']}>
-      <DoctorLayout />
-    </ProtectedRoute>
-  ),
-  children: [
-    { index: true, element: <Navigate to={ROUTES.doctor.dashboard} replace /> },
-    {
-      path: 'dashboard',
-      handle: crumb('Dashboard'),
-      element: lazyPage(() => import('@/pages/doctor/DoctorDashboardPage'), 'DoctorDashboardPage'),
-    },
-    placeholder('schedule', 'My Schedule', 'Working hours, availability and time off.'),
-    placeholder('appointments', 'Appointments', 'Your upcoming and past consultations.'),
-    placeholder('patients', 'Patients', 'Patients under your care.'),
-    placeholder('profile', 'Profile', 'Your professional profile.'),
-  ],
-}
+const doctorRoutes = portal('doctor', 'Doctor', <DoctorLayout />, [
+  page({
+    path: 'dashboard',
+    title: 'Dashboard',
+    permission: 'dashboard:doctor',
+    element: lazyPage(() => import('@/pages/doctor/DoctorDashboardPage'), 'DoctorDashboardPage'),
+  }),
+  {
+    path: 'appointments',
+    handle: crumb('My Appointments'),
+    children: [
+      {
+        index: true,
+        element: (
+          <ProtectedRoute permission="appointments:view-assigned">
+            <ComingSoonPage title="My Appointments" description="Your upcoming and past consultations." />
+          </ProtectedRoute>
+        ),
+      },
+      page({ path: ':appointmentId', title: 'Appointment Details', permission: 'appointments:view-assigned', description: 'Patient details, visit reason and appointment history.' }),
+    ],
+  },
+  page({ path: 'schedule', title: 'My Schedule', permission: 'schedule:manage-own', description: 'Working hours, breaks and availability.' }),
+  page({ path: 'profile', title: 'Profile Settings', permission: 'profile:manage', description: 'Your professional profile and password.' }),
+])
 
-const receptionistRoutes: RouteObject = {
-  path: 'receptionist',
-  handle: crumb('Front desk'),
-  element: (
-    <ProtectedRoute roles={['receptionist']}>
-      <ReceptionistLayout />
-    </ProtectedRoute>
-  ),
-  children: [
-    { index: true, element: <Navigate to={ROUTES.receptionist.dashboard} replace /> },
-    {
-      path: 'dashboard',
-      handle: crumb('Dashboard'),
-      element: lazyPage(() => import('@/pages/receptionist/ReceptionistDashboardPage'), 'ReceptionistDashboardPage'),
-    },
-    placeholder('appointments', 'Appointments', 'Book, reschedule and manage appointments for patients.'),
-    placeholder('check-in', 'Check-in', 'Arrivals queue and patient check-in.'),
-    placeholder('patients', 'Patients', 'Patient directory.'),
-    placeholder('doctors', 'Doctors', 'Doctor directory and availability.'),
-  ],
-}
+const receptionistRoutes = portal('receptionist', 'Front desk', <ReceptionistLayout />, [
+  page({
+    path: 'dashboard',
+    title: 'Dashboard',
+    permission: 'dashboard:reception',
+    element: lazyPage(() => import('@/pages/receptionist/ReceptionistDashboardPage'), 'ReceptionistDashboardPage'),
+  }),
+  page({ path: 'patients', title: 'Patients', permission: 'patients:manage', description: 'Register patients and update their details.' }),
+  page({ path: 'appointments', title: 'Appointments', permission: 'appointments:manage', description: 'Book, confirm, reschedule and cancel appointments.' }),
+  page({ path: 'doctors', title: 'Doctor Availability', permission: 'doctors:view-availability', description: 'Doctor schedules and free time slots.' }),
+  page({ path: 'profile', title: 'Profile Settings', permission: 'profile:manage', description: 'Your account details and password.' }),
+])
 
-const adminRoutes: RouteObject = {
-  path: 'admin',
-  handle: crumb('Admin'),
-  element: (
-    <ProtectedRoute roles={['admin']}>
-      <AdminLayout />
-    </ProtectedRoute>
-  ),
-  children: [
-    { index: true, element: <Navigate to={ROUTES.admin.dashboard} replace /> },
-    {
-      path: 'dashboard',
-      handle: crumb('Dashboard'),
-      element: lazyPage(() => import('@/pages/admin/AdminDashboardPage'), 'AdminDashboardPage'),
-    },
-    placeholder('appointments', 'Appointments', 'Every appointment across the hospital.'),
-    placeholder('reports', 'Reports', 'Utilisation, revenue and performance analytics.'),
-    placeholder('doctors', 'Doctors', 'Manage doctors, specialities and schedules.'),
-    placeholder('patients', 'Patients', 'Manage patient records.'),
-    placeholder('departments', 'Departments', 'Configure clinical departments.'),
-    placeholder('users', 'Users & Roles', 'Staff accounts and permissions.'),
-    placeholder('settings', 'Settings', 'Hospital-wide configuration.'),
-    {
-      path: 'ui-kit',
-      handle: crumb('UI Kit'),
-      element: lazyPage(() => import('@/pages/admin/UiKitPage'), 'UiKitPage'),
-    },
-  ],
-}
+const adminRoutes = portal('admin', 'Admin', <AdminLayout />, [
+  page({
+    path: 'dashboard',
+    title: 'Dashboard',
+    permission: 'dashboard:admin',
+    element: lazyPage(() => import('@/pages/admin/AdminDashboardPage'), 'AdminDashboardPage'),
+  }),
+  page({ path: 'users', title: 'Users', permission: 'users:manage', description: 'Staff and patient accounts, roles and status.' }),
+  page({ path: 'doctors', title: 'Doctors', permission: 'doctors:manage', description: 'Manage doctors, specialities and schedules.' }),
+  page({ path: 'departments', title: 'Departments', permission: 'departments:manage', description: 'Configure clinical departments.' }),
+  page({ path: 'patients', title: 'Patients', permission: 'patients:manage', description: 'Manage patient records.' }),
+  page({ path: 'appointments', title: 'Appointments', permission: 'appointments:manage', description: 'Every appointment across the hospital.' }),
+  page({ path: 'reports', title: 'Reports', permission: 'reports:view', description: 'Utilisation, revenue and performance analytics.' }),
+  page({ path: 'settings', title: 'System Settings', permission: 'settings:manage', description: 'Hospital-wide configuration.' }),
+  page({
+    path: 'ui-kit',
+    title: 'UI Kit',
+    permission: 'settings:manage',
+    element: lazyPage(() => import('@/pages/admin/UiKitPage'), 'UiKitPage'),
+  }),
+])
 
 export const router = createBrowserRouter([
   {
@@ -139,7 +148,6 @@ export const router = createBrowserRouter([
       doctorRoutes,
       receptionistRoutes,
       adminRoutes,
-      { path: 'unauthorized', element: <UnauthorizedPage /> },
       { path: '*', element: <NotFoundPage /> },
     ],
   },

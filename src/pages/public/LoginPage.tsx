@@ -2,43 +2,44 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { ClipboardList, Loader2, ShieldCheck, Stethoscope, User } from 'lucide-react'
+import { AlertCircle, ClipboardList, Loader2, LogIn, ShieldCheck, Stethoscope, User } from 'lucide-react'
 import { FormField } from '@/components/common/FormField'
+import { PasswordInput } from '@/components/common/PasswordInput'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
-import { Separator } from '@/components/ui/separator'
-import { ROLE_HOME, ROLE_LABEL, ROUTES } from '@/config/routes'
-import { DEMO_PASSWORD } from '@/data/mockData'
+import { Label } from '@/components/ui/label'
+import { ROLE_LABEL, ROUTES } from '@/config/routes'
+import { DEMO_ACCOUNTS, DEMO_PASSWORD } from '@/data/mockData'
 import { useAuth } from '@/hooks/useAuth'
+import { getPostLoginPath } from '@/lib/permissions'
 import { toast } from '@/lib/toast'
 import { loginSchema, type LoginFormValues } from '@/lib/validation'
 import type { AuthUser, UserRole } from '@/types'
 import { AuthCard } from './AuthCard'
 
-const ROLE_ICONS: Record<UserRole, typeof User> = {
-  patient: User,
-  doctor: Stethoscope,
-  receptionist: ClipboardList,
-  admin: ShieldCheck,
-}
+const DEMO_ROLES: { role: UserRole; icon: typeof User }[] = [
+  { role: 'admin', icon: ShieldCheck },
+  { role: 'receptionist', icon: ClipboardList },
+  { role: 'doctor', icon: Stethoscope },
+  { role: 'patient', icon: User },
+]
 
 export function LoginPage() {
-  const { login, loginAsRole } = useAuth()
+  const { login } = useAuth()
   const navigate = useNavigate()
   const from = (useLocation().state as { from?: string } | null)?.from
   const [demoPending, setDemoPending] = useState<UserRole | null>(null)
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { email: '', password: '' },
+    defaultValues: { email: '', password: '', rememberMe: false },
   })
+  const busy = form.formState.isSubmitting || demoPending !== null
 
   const onSuccess = (user: AuthUser) => {
-    toast.success(`Welcome back, ${user.fullName.split(' ')[0]}`)
-    // Only honour the redirect if it belongs to the signed-in role's area.
-    const home = ROLE_HOME[user.role]
-    const target = from && from.startsWith(`/${user.role}`) ? from : home
-    navigate(target, { replace: true })
+    toast.success(`Welcome back, ${user.fullName.replace(/^Dr\.\s+/, '').split(' ')[0]}`)
+    navigate(getPostLoginPath(user, from), { replace: true })
   }
 
   const onSubmit = form.handleSubmit(async (values) => {
@@ -50,11 +51,15 @@ export function LoginPage() {
   })
 
   const signInAs = async (role: UserRole) => {
+    const credentials = { email: DEMO_ACCOUNTS[role], password: DEMO_PASSWORD }
+    form.clearErrors()
+    form.setValue('email', credentials.email)
+    form.setValue('password', credentials.password)
     setDemoPending(role)
     try {
-      onSuccess(await loginAsRole(role))
+      onSuccess(await login(credentials))
     } catch (error) {
-      toast.error('Could not sign in', (error as Error).message)
+      form.setError('root', { message: (error as Error).message })
     } finally {
       setDemoPending(null)
     }
@@ -62,8 +67,8 @@ export function LoginPage() {
 
   return (
     <AuthCard
-      title="Sign in to MediBook"
-      description="Access your appointments and records."
+      title="Sign in to your account"
+      description="Manage appointments, schedules and patient care."
       footer={
         <>
           New patient?{' '}
@@ -74,6 +79,12 @@ export function LoginPage() {
       }
     >
       <form onSubmit={onSubmit} className="space-y-4" noValidate>
+        {form.formState.errors.root && (
+          <div role="alert" className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-destructive">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+            {form.formState.errors.root.message}
+          </div>
+        )}
         <FormField
           control={form.control}
           name="email"
@@ -87,39 +98,72 @@ export function LoginPage() {
           name="password"
           label="Password"
           render={({ field, inputProps }) => (
-            <Input type="password" autoComplete="current-password" placeholder="••••••••" {...field} {...inputProps} />
+            <PasswordInput autoComplete="current-password" placeholder="Enter your password" {...field} {...inputProps} />
           )}
         />
-        {form.formState.errors.root && (
-          <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-destructive">{form.formState.errors.root.message}</p>
-        )}
-        <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
-          {form.formState.isSubmitting && <Loader2 className="animate-spin" />}
+        <div className="flex items-center justify-between gap-3">
+          <FormField
+            control={form.control}
+            name="rememberMe"
+            render={({ field, inputProps }) => (
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id={inputProps.id}
+                  checked={field.value}
+                  onCheckedChange={(checked) => field.onChange(checked === true)}
+                  onBlur={field.onBlur}
+                  ref={field.ref}
+                />
+                <Label htmlFor={inputProps.id} className="font-normal text-muted-foreground">
+                  Remember me
+                </Label>
+              </div>
+            )}
+          />
+          <Link to={ROUTES.forgotPassword} className="text-sm font-medium text-primary hover:underline">
+            Forgot password?
+          </Link>
+        </div>
+        <Button type="submit" className="w-full" disabled={busy}>
+          {form.formState.isSubmitting ? <Loader2 className="animate-spin" /> : <LogIn />}
           Sign in
         </Button>
       </form>
 
-      <div className="my-6 flex items-center gap-3">
-        <Separator className="flex-1" />
-        <span className="text-xs uppercase tracking-wide text-muted-foreground">or explore a demo</span>
-        <Separator className="flex-1" />
-      </div>
-
-      <div className="grid grid-cols-2 gap-2">
-        {(Object.keys(ROLE_ICONS) as UserRole[]).map((role) => {
-          const Icon = ROLE_ICONS[role]
-          return (
-            <Button key={role} variant="outline" onClick={() => signInAs(role)} disabled={demoPending !== null} className="justify-start">
-              {demoPending === role ? <Loader2 className="animate-spin" /> : <Icon className="text-primary" />}
-              {ROLE_LABEL[role]}
-            </Button>
-          )
-        })}
-      </div>
-      <p className="mt-3 text-center text-xs text-muted-foreground">
-        Demo emails: <span className="font-medium">patient@ / doctor@ / reception@ / admin@medibook.example</span> · password{' '}
-        <span className="font-medium">{DEMO_PASSWORD}</span>
-      </p>
+      <section className="mt-6 rounded-xl border bg-muted/40 p-4" aria-labelledby="demo-accounts-heading">
+        <div className="mb-3 flex items-baseline justify-between gap-2">
+          <h2 id="demo-accounts-heading" className="text-sm font-semibold">
+            Demo accounts
+          </h2>
+          <p className="text-xs text-muted-foreground">
+            Password <code className="rounded bg-card px-1.5 py-0.5 font-mono text-foreground">{DEMO_PASSWORD}</code>
+          </p>
+        </div>
+        <ul className="space-y-1.5">
+          {DEMO_ROLES.map(({ role, icon: Icon }) => (
+            <li key={role}>
+              <button
+                type="button"
+                onClick={() => signInAs(role)}
+                disabled={busy}
+                className="flex w-full items-center gap-3 rounded-lg border bg-card px-3 py-2 text-left transition-colors hover:border-primary/40 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-60"
+              >
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+                  {demoPending === role ? <Loader2 className="h-4 w-4 animate-spin" /> : <Icon className="h-4 w-4" />}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-medium leading-tight">{ROLE_LABEL[role]}</span>
+                  <span className="block truncate text-xs text-muted-foreground">{DEMO_ACCOUNTS[role]}</span>
+                </span>
+                <span className="text-xs font-medium text-primary">Sign in</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+        <p className="mt-3 text-xs text-muted-foreground">
+          Demo only — accounts and passwords are stored in this browser, not on a server.
+        </p>
+      </section>
     </AuthCard>
   )
 }

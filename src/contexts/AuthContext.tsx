@@ -1,12 +1,13 @@
 import { createContext, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { authService, storageService } from '@/services'
-import type { AuthUser, LoginCredentials, UserRole } from '@/types'
+import { storageKey } from '@/lib/storage'
+import { authService, SESSION_KEY, storageService, type PatientSignUpInput } from '@/services'
+import type { AuthUser, LoginCredentials } from '@/types'
 
 export interface AuthContextValue {
   user: AuthUser | null
   isAuthenticated: boolean
   login: (credentials: LoginCredentials) => Promise<AuthUser>
-  loginAsRole: (role: UserRole) => Promise<AuthUser>
+  registerPatient: (input: PatientSignUpInput) => Promise<AuthUser>
   logout: () => Promise<void>
 }
 
@@ -25,14 +26,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [],
   )
 
+  // Signing in or out in another tab applies here too.
+  useEffect(() => {
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === null || event.key === storageKey(SESSION_KEY)) setUser(authService.getCurrentUser())
+    }
+    window.addEventListener('storage', onStorage)
+    return () => window.removeEventListener('storage', onStorage)
+  }, [])
+
   const login = useCallback(async (credentials: LoginCredentials) => {
     const signedIn = await authService.login(credentials)
     setUser(signedIn)
     return signedIn
   }, [])
 
-  const loginAsRole = useCallback(async (role: UserRole) => {
-    const signedIn = await authService.loginAsRole(role)
+  const registerPatient = useCallback(async (input: PatientSignUpInput) => {
+    const signedIn = await authService.registerPatient(input)
     setUser(signedIn)
     return signedIn
   }, [])
@@ -43,8 +53,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const value = useMemo(
-    () => ({ user, isAuthenticated: !!user, login, loginAsRole, logout }),
-    [user, login, loginAsRole, logout],
+    () => ({ user, isAuthenticated: !!user, login, registerPatient, logout }),
+    [user, login, registerPatient, logout],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

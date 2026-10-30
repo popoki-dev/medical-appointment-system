@@ -2,10 +2,9 @@ import {
   BarChart3,
   Building2,
   CalendarCheck,
+  CalendarClock,
   CalendarDays,
   CalendarPlus,
-  ClipboardCheck,
-  FileText,
   LayoutDashboard,
   Palette,
   Settings,
@@ -22,39 +21,33 @@ export const NAVIGATION: Record<UserRole, NavSection[]> = {
     {
       items: [
         { title: 'Dashboard', href: ROUTES.patient.dashboard, icon: LayoutDashboard },
+        { title: 'Find a Doctor', href: ROUTES.patient.doctors, icon: Stethoscope },
         { title: 'Book Appointment', href: ROUTES.patient.book, icon: CalendarPlus },
         { title: 'My Appointments', href: ROUTES.patient.appointments, icon: CalendarDays },
-        { title: 'Medical Records', href: ROUTES.patient.records, icon: FileText },
       ],
     },
-    { label: 'Account', items: [{ title: 'Profile', href: ROUTES.patient.profile, icon: UserCircle }] },
+    { label: 'Account', items: [{ title: 'Profile Settings', href: ROUTES.patient.profile, icon: UserCircle }] },
   ],
   doctor: [
     {
       items: [
         { title: 'Dashboard', href: ROUTES.doctor.dashboard, icon: LayoutDashboard },
+        { title: 'My Appointments', href: ROUTES.doctor.appointments, icon: CalendarCheck },
         { title: 'My Schedule', href: ROUTES.doctor.schedule, icon: CalendarDays },
-        { title: 'Appointments', href: ROUTES.doctor.appointments, icon: CalendarCheck },
-        { title: 'Patients', href: ROUTES.doctor.patients, icon: Users },
       ],
     },
-    { label: 'Account', items: [{ title: 'Profile', href: ROUTES.doctor.profile, icon: UserCircle }] },
+    { label: 'Account', items: [{ title: 'Profile Settings', href: ROUTES.doctor.profile, icon: UserCircle }] },
   ],
   receptionist: [
     {
       items: [
         { title: 'Dashboard', href: ROUTES.receptionist.dashboard, icon: LayoutDashboard },
         { title: 'Appointments', href: ROUTES.receptionist.appointments, icon: CalendarDays },
-        { title: 'Check-in', href: ROUTES.receptionist.checkIn, icon: ClipboardCheck },
-      ],
-    },
-    {
-      label: 'Directory',
-      items: [
         { title: 'Patients', href: ROUTES.receptionist.patients, icon: Users },
-        { title: 'Doctors', href: ROUTES.receptionist.doctors, icon: Stethoscope },
+        { title: 'Doctor Availability', href: ROUTES.receptionist.doctors, icon: CalendarClock },
       ],
     },
+    { label: 'Account', items: [{ title: 'Profile Settings', href: ROUTES.receptionist.profile, icon: UserCircle }] },
   ],
   admin: [
     {
@@ -67,16 +60,16 @@ export const NAVIGATION: Record<UserRole, NavSection[]> = {
     {
       label: 'Management',
       items: [
+        { title: 'Users', href: ROUTES.admin.users, icon: UserCog },
         { title: 'Doctors', href: ROUTES.admin.doctors, icon: Stethoscope },
-        { title: 'Patients', href: ROUTES.admin.patients, icon: Users },
         { title: 'Departments', href: ROUTES.admin.departments, icon: Building2 },
-        { title: 'Users & Roles', href: ROUTES.admin.users, icon: UserCog },
+        { title: 'Patients', href: ROUTES.admin.patients, icon: Users },
       ],
     },
     {
       label: 'System',
       items: [
-        { title: 'Settings', href: ROUTES.admin.settings, icon: Settings },
+        { title: 'System Settings', href: ROUTES.admin.settings, icon: Settings },
         { title: 'UI Kit', href: ROUTES.admin.uiKit, icon: Palette },
       ],
     },

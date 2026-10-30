@@ -12,6 +12,8 @@ export class ServiceError extends Error {
   constructor(
     message: string,
     public readonly code: ServiceErrorCode = 'VALIDATION',
+    /** The form field the error belongs to, when there is one. */
+    public readonly field?: string,
   ) {
     super(message)
     this.name = 'ServiceError'

@@ -2,7 +2,7 @@ export const APP_CONFIG = {
   name: 'MediBook',
   tagline: 'Hospital appointments, simplified',
   hospitalName: 'MediBook General Hospital',
-  supportEmail: 'hello@medibook.example',
+  supportEmail: 'hello@hospital.demo',
   /** Simulated network latency for mock services, in ms. */
   mockLatency: 350,
   /** Prefix for every localStorage key the app owns. */

@@ -26,14 +26,14 @@ import type {
 } from '@/types'
 
 /** Every seeded account uses this password. Demo only. */
-export const DEMO_PASSWORD = 'password123'
+export const DEMO_PASSWORD = 'Demo123!'
 
-/** The account each one-click demo login signs in as. */
+/** The demo login for each role, shown on the login page. */
 export const DEMO_ACCOUNTS: Record<UserRole, string> = {
-  patient: 'patient@medibook.example',
-  doctor: 'doctor@medibook.example',
-  receptionist: 'reception@medibook.example',
-  admin: 'admin@medibook.example',
+  admin: 'admin@hospital.demo',
+  receptionist: 'receptionist@hospital.demo',
+  doctor: 'doctor@hospital.demo',
+  patient: 'patient@hospital.demo',
 }
 
 const pad = (n: number, width = 3) => String(n).padStart(width, '0')
@@ -98,23 +98,23 @@ type DoctorSeed = [
 const DOCTORS: DoctorSeed[] = [
   ['Dr. James Wilson', DEMO_ACCOUNTS.doctor, 'dep_001', 'Interventional Cardiologist', 'MD, FACC', 14, 150, ['English'], 4.9,
     'Specialises in coronary artery disease and minimally invasive cardiac procedures.'],
-  ['Dr. Amara Okonkwo', 'a.okonkwo@medibook.example', 'dep_001', 'Cardiac Electrophysiologist', 'MD, FHRS', 11, 165, ['English', 'Igbo'], 4.8,
+  ['Dr. Amara Okonkwo', 'a.okonkwo@hospital.demo', 'dep_001', 'Cardiac Electrophysiologist', 'MD, FHRS', 11, 165, ['English', 'Igbo'], 4.8,
     'Treats heart-rhythm disorders including atrial fibrillation, and manages pacemaker patients.'],
-  ['Dr. Henrik Larsen', 'h.larsen@medibook.example', 'dep_001', 'Preventive Cardiologist', 'MD, MPH', 8, 130, ['English', 'Danish'], 4.7,
+  ['Dr. Henrik Larsen', 'h.larsen@hospital.demo', 'dep_001', 'Preventive Cardiologist', 'MD, MPH', 8, 130, ['English', 'Danish'], 4.7,
     'Focuses on cholesterol, blood pressure and lifestyle programmes to prevent heart disease.'],
-  ['Dr. Aisha Rahman', 'a.rahman@medibook.example', 'dep_002', 'Neurologist', 'MD, PhD', 12, 170, ['English', 'Bengali', 'Hindi'], 4.8,
+  ['Dr. Aisha Rahman', 'a.rahman@hospital.demo', 'dep_002', 'Neurologist', 'MD, PhD', 12, 170, ['English', 'Bengali', 'Hindi'], 4.8,
     'Sub-specialises in migraine, epilepsy and neurodegenerative disorders.'],
-  ['Dr. Mateo Alvarez', 'm.alvarez@medibook.example', 'dep_002', 'Stroke & Vascular Neurologist', 'MD', 9, 160, ['English', 'Spanish'], 4.6,
+  ['Dr. Mateo Alvarez', 'm.alvarez@hospital.demo', 'dep_002', 'Stroke & Vascular Neurologist', 'MD', 9, 160, ['English', 'Spanish'], 4.6,
     'Leads the stroke-prevention clinic and post-stroke rehabilitation follow-up.'],
-  ['Dr. Yuki Tanaka', 'y.tanaka@medibook.example', 'dep_002', 'Neuromuscular Specialist', 'MD, FAAN', 15, 175, ['English', 'Japanese'], 4.9,
+  ['Dr. Yuki Tanaka', 'y.tanaka@hospital.demo', 'dep_002', 'Neuromuscular Specialist', 'MD, FAAN', 15, 175, ['English', 'Japanese'], 4.9,
     'Diagnoses and manages neuropathy, myasthenia gravis and muscular dystrophies.'],
-  ['Dr. Michael Chen', 'm.chen@medibook.example', 'dep_003', 'General Pediatrician', 'MD, FAAP', 10, 110, ['English', 'Mandarin'], 4.9,
+  ['Dr. Michael Chen', 'm.chen@hospital.demo', 'dep_003', 'General Pediatrician', 'MD, FAAP', 10, 110, ['English', 'Mandarin'], 4.9,
     'Gentle, family-centred care from newborn check-ups through adolescence.'],
-  ['Dr. Sofia Rossi', 's.rossi@medibook.example', 'dep_003', 'Pediatric Allergist', 'MD', 7, 120, ['English', 'Italian'], 4.7,
+  ['Dr. Sofia Rossi', 's.rossi@hospital.demo', 'dep_003', 'Pediatric Allergist', 'MD', 7, 120, ['English', 'Italian'], 4.7,
     'Helps children with asthma, eczema and food allergies live full, active lives.'],
-  ['Dr. Laura Bennett', 'l.bennett@medibook.example', 'dep_004', 'Orthopedic Surgeon', 'MD, FAAOS', 16, 180, ['English'], 4.7,
+  ['Dr. Laura Bennett', 'l.bennett@hospital.demo', 'dep_004', 'Orthopedic Surgeon', 'MD, FAAOS', 16, 180, ['English'], 4.7,
     'Performs hip and knee replacements and complex fracture repair.'],
-  ['Dr. Kwame Mensah', 'k.mensah@medibook.example', 'dep_004', 'Sports Medicine Physician', 'MD, CAQSM', 6, 140, ['English', 'French', 'Twi'], 4.8,
+  ['Dr. Kwame Mensah', 'k.mensah@hospital.demo', 'dep_004', 'Sports Medicine Physician', 'MD, CAQSM', 6, 140, ['English', 'French', 'Twi'], 4.8,
     'Treats sports injuries and designs return-to-play rehabilitation plans.'],
 ]
 
@@ -154,13 +154,13 @@ const PATIENTS: PatientSeed[] = [
 
 const RECEPTIONISTS: [string, string][] = [
   ['Sofia Martinez', DEMO_ACCOUNTS.receptionist],
-  ['Liam O’Connor', 'l.oconnor@medibook.example'],
-  ['Mei Lin', 'm.lin@medibook.example'],
+  ['Liam O’Connor', 'l.oconnor@hospital.demo'],
+  ['Mei Lin', 'm.lin@hospital.demo'],
 ]
 
 const ADMINS: [string, string][] = [
   ['Daniel Okafor', DEMO_ACCOUNTS.admin],
-  ['Rebecca Stein', 'r.stein@medibook.example'],
+  ['Rebecca Stein', 'r.stein@hospital.demo'],
 ]
 
 function buildPeople() {
@@ -362,7 +362,7 @@ function buildNotifications(now: Date, users: User[]): AppNotification[] {
   const doctorId = byEmail(DEMO_ACCOUNTS.doctor)
   const receptionId = byEmail(DEMO_ACCOUNTS.receptionist)
   const adminId = byEmail(DEMO_ACCOUNTS.admin)
-  const secondAdminId = byEmail('r.stein@medibook.example')
+  const secondAdminId = byEmail('r.stein@hospital.demo')
   const otherPatientId = byEmail('marcus.johnson@example.com')
 
   const rows: [userId: string, title: string, message: string, type: AppNotification['type'], isRead: boolean, createdAt: Date][] = [
@@ -373,7 +373,7 @@ function buildNotifications(now: Date, users: User[]): AppNotification[] {
     [doctorId, 'New appointment request', 'Emily Carter requested a consultation. Review it in your appointments.', 'appointment', false, subMinutes(now, 25)],
     [doctorId, 'Schedule updated', 'Your Friday clinic hours were updated by the administrator.', 'system', false, subHours(now, 5)],
     [doctorId, 'Patient cancelled', 'Thomas Wright cancelled his follow-up appointment.', 'appointment', true, subDays(now, 1)],
-    [receptionId, 'Check-in queue', 'Three patients are waiting for check-in at the front desk.', 'alert', false, subMinutes(now, 8)],
+    [receptionId, 'Patients waiting', 'Three patients have arrived early for their appointments.', 'alert', false, subMinutes(now, 8)],
     [receptionId, 'New online booking', 'A new appointment was booked online for Cardiology.', 'appointment', false, subHours(now, 2)],
     [receptionId, 'Doctor on leave', 'Dr. Yuki Tanaka is on leave. Please reschedule affected appointments.', 'alert', true, subDays(now, 2)],
     [adminId, 'Weekly report ready', 'The weekly appointments report has been generated.', 'system', false, subHours(now, 1)],

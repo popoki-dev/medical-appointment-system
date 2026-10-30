@@ -8,6 +8,7 @@ export function ReceptionistLayout() {
       navigation={NAVIGATION.receptionist}
       homeHref={ROUTES.receptionist.dashboard}
       portalLabel="Front desk"
+      profileHref={ROUTES.receptionist.profile}
     />
   )
 }
