@@ -1,4 +1,4 @@
-import { doctorService, type DoctorFilters } from '@/services'
+import { doctorService, type DoctorAvailability, type DoctorFilters } from '@/services'
 import { useAsync } from './useAsync'
 
 export function useDoctors(filters: DoctorFilters = {}) {
@@ -28,6 +28,16 @@ export function useAvailableSlots(doctorId: string | undefined, date: string | u
   return useAsync(
     () => (doctorId && date ? doctorService.getAvailableSlots(doctorId, date) : Promise.resolve([])),
     [doctorId, date],
+    { watch: ['appointments', 'doctorSchedules', 'doctors'] },
+  )
+}
+
+/** Upcoming free-slot counts and the next free slot for each doctor; refreshes as bookings change. */
+export function useDoctorAvailability(doctorIds: string[] | undefined, days = 14) {
+  const key = doctorIds?.join(',')
+  return useAsync(
+    () => (doctorIds?.length ? doctorService.getAvailability(doctorIds, { days }) : Promise.resolve<Record<string, DoctorAvailability>>({})),
+    [key, days],
     { watch: ['appointments', 'doctorSchedules', 'doctors'] },
   )
 }

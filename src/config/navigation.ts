@@ -91,4 +91,5 @@ export const PUBLIC_NAVIGATION = [
   { title: 'Find a Doctor', href: ROUTES.doctors },
   { title: 'Departments', href: ROUTES.departments },
   { title: 'About', href: ROUTES.about },
+  { title: 'Contact', href: ROUTES.contact },
 ]

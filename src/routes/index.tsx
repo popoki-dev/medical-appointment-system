@@ -13,6 +13,7 @@ import { ComingSoonPage } from '@/pages/shared/ComingSoonPage'
 import type { Permission } from '@/lib/permissions'
 import type { UserRole } from '@/types'
 import { GuestRoute, ProtectedRoute } from './ProtectedRoute'
+import { RootLayout } from './RootLayout'
 import { lazyPage } from './lazyPage'
 
 const crumb = (label: string): RouteHandle => ({ crumb: label })
@@ -45,19 +46,15 @@ const portal = (role: UserRole, label: string, layout: ReactNode, children: Rout
   children: [{ index: true, element: <Navigate to={ROLE_HOME[role]} replace /> }, ...children],
 })
 
-const publicPage = (title: string, description: string) => (
-  <div className="container py-10">
-    <ComingSoonPage title={title} description={description} />
-  </div>
-)
-
 const publicRoutes: RouteObject = {
   element: <PublicLayout />,
   children: [
     { index: true, element: <HomePage /> },
-    { path: 'doctors', element: publicPage('Find a doctor', 'Search our specialists by department and availability.') },
-    { path: 'departments', element: publicPage('Departments', 'Explore our clinical departments.') },
-    { path: 'about', element: publicPage('About us', 'Our mission, people and facilities.') },
+    { path: 'doctors', element: lazyPage(() => import('@/pages/public/DoctorsPage'), 'DoctorsPage') },
+    { path: 'doctors/:doctorId', element: lazyPage(() => import('@/pages/public/DoctorProfilePage'), 'DoctorProfilePage') },
+    { path: 'departments', element: lazyPage(() => import('@/pages/public/DepartmentsPage'), 'DepartmentsPage') },
+    { path: 'about', element: lazyPage(() => import('@/pages/public/AboutPage'), 'AboutPage') },
+    { path: 'contact', element: lazyPage(() => import('@/pages/public/ContactPage'), 'ContactPage') },
     { path: 'login', element: <GuestRoute><LoginPage /></GuestRoute> },
     { path: 'register', element: <GuestRoute><RegisterPage /></GuestRoute> },
     { path: 'forgot-password', element: <GuestRoute><ForgotPasswordPage /></GuestRoute> },
@@ -174,6 +171,7 @@ const adminRoutes = portal('admin', 'Admin', <AdminLayout />, [
 export const router = createBrowserRouter([
   {
     path: '/',
+    element: <RootLayout />,
     errorElement: <RouteErrorPage />,
     children: [
       publicRoutes,
