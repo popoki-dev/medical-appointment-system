@@ -88,7 +88,7 @@ export function MyAppointmentsPage() {
         description="Every visit you've booked with us, past and upcoming."
         actions={
           <Button asChild>
-            <Link to={ROUTES.patient.book}>
+            <Link to={ROUTES.bookAppointment}>
               <CalendarPlus /> Book appointment
             </Link>
           </Button>
@@ -166,7 +166,7 @@ export function MyAppointmentsPage() {
             </Button>
           ) : (
             <Button asChild size="sm">
-              <Link to={ROUTES.patient.book}>Book appointment</Link>
+              <Link to={ROUTES.bookAppointment}>Book appointment</Link>
             </Button>
           )
         }

@@ -100,9 +100,10 @@ export function canAccess(subject: Subject, { roles, permission }: AccessRule): 
  * URL is safe to send the signed-in user to.
  */
 export const ROUTE_PERMISSIONS: ReadonlyArray<readonly [pattern: string, permission: Permission]> = [
+  [ROUTES.bookAppointment, 'appointments:book'],
+  [ROUTES.bookingSuccess(':appointmentId'), 'appointments:book'],
   [ROUTES.patient.dashboard, 'dashboard:patient'],
   [ROUTES.patient.doctors, 'doctors:browse'],
-  [ROUTES.patient.book, 'appointments:book'],
   [ROUTES.patient.appointments, 'appointments:view-own'],
   [ROUTES.patient.medical, 'medical-info:view-own'],
   [ROUTES.patient.notifications, 'notifications:view-own'],
@@ -129,13 +130,19 @@ export const ROUTE_PERMISSIONS: ReadonlyArray<readonly [pattern: string, permiss
   [ROUTES.admin.uiKit, 'settings:manage'],
 ]
 
-/** Whether a role may open a URL: it must be inside the role's portal and pass that page's permission. */
+const isWithin = (pathname: string, root: string) => pathname === root || pathname.startsWith(`${root}/`)
+
+/**
+ * Whether a role may open a URL. Portal pages must be in the role's own portal; any
+ * protected page (portal or not, such as the booking wizard) must pass its permission.
+ */
 export function canAccessPath(subject: Subject, path: string): boolean {
   const role = roleOf(subject)
   if (!role) return false
   const pathname = path.split(/[?#]/)[0]
   const portal = ROLE_PORTAL[role]
-  if (pathname !== portal && !pathname.startsWith(`${portal}/`)) return false
+  const inOtherPortal = Object.values(ROLE_PORTAL).some((root) => root !== portal && isWithin(pathname, root))
+  if (inOtherPortal) return false
   const rule = ROUTE_PERMISSIONS.find(([pattern]) => matchPath(pattern, pathname))
   return rule ? hasPermission(role, rule[1]) : pathname === portal
 }

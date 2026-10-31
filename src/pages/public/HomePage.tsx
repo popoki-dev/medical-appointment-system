@@ -91,7 +91,7 @@ export function HomePage() {
             </p>
             <div className="flex flex-col gap-3 sm:flex-row">
               <Button size="lg" asChild>
-                <Link to={ROUTES.patient.bookWith()}>
+                <Link to={ROUTES.bookWith()}>
                   <CalendarPlus /> Book an Appointment
                 </Link>
               </Button>
@@ -240,7 +240,7 @@ export function HomePage() {
               </p>
             </div>
             <Button size="lg" className="bg-white text-primary shadow-sm hover:bg-white/90" asChild>
-              <Link to={ROUTES.patient.bookWith()}>
+              <Link to={ROUTES.bookWith()}>
                 <CalendarPlus /> Book an Appointment
               </Link>
             </Button>
@@ -341,7 +341,7 @@ function HeroVisual({ soonest, loading }: HeroVisualProps) {
           </div>
         ) : soonest ? (
           <Link
-            to={ROUTES.patient.bookWith({ doctorId: soonest.doctor.id, date: soonest.next.date, time: soonest.next.startTime })}
+            to={ROUTES.bookWith({ doctorId: soonest.doctor.id, date: soonest.next.date, time: soonest.next.startTime })}
             className="group mt-3 flex items-center gap-3"
           >
             <DoctorAvatar doctor={soonest.doctor} className="h-11 w-11" />

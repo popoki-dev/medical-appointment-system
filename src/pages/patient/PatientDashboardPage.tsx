@@ -41,7 +41,7 @@ const RECENT_LIMIT = 5
 const NOTIFICATION_LIMIT = 5
 
 const QUICK_ACTIONS = [
-  { title: 'Book Appointment', description: 'Pick a doctor and time', href: ROUTES.patient.book, icon: CalendarPlus },
+  { title: 'Book Appointment', description: 'Pick a doctor and time', href: ROUTES.bookAppointment, icon: CalendarPlus },
   { title: 'Browse Doctors', description: 'Specialists and availability', href: ROUTES.patient.doctors, icon: Stethoscope },
   { title: 'View All Appointments', description: 'History and upcoming visits', href: ROUTES.patient.appointments, icon: CalendarDays },
   { title: 'Edit Profile', description: 'Contact and personal details', href: ROUTES.patient.profile, icon: UserPen },
@@ -92,7 +92,7 @@ export function PatientDashboardPage() {
         }
         actions={
           <Button asChild>
-            <Link to={ROUTES.patient.book}>
+            <Link to={ROUTES.bookAppointment}>
               <CalendarPlus /> Book appointment
             </Link>
           </Button>
@@ -157,7 +157,7 @@ export function PatientDashboardPage() {
           emptyDescription="Your bookings will appear here."
           emptyAction={
             <Button asChild size="sm">
-              <Link to={ROUTES.patient.book}>Book appointment</Link>
+              <Link to={ROUTES.bookAppointment}>Book appointment</Link>
             </Button>
           }
         />
@@ -287,7 +287,7 @@ function UpcomingAppointmentCard({ appointment, moreCount, loading, onView, onCa
             description="Book a visit with one of our specialists."
             action={
               <Button asChild size="sm">
-                <Link to={ROUTES.patient.book}>Book appointment</Link>
+                <Link to={ROUTES.bookAppointment}>Book appointment</Link>
               </Button>
             }
             className="py-6"

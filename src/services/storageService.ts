@@ -7,7 +7,7 @@ import type { CollectionName, Database, EntityOf } from '@/types'
  * Bump when the shape of the stored data changes. On mismatch the stored data is
  * discarded and the mock dataset is seeded again.
  */
-const DB_VERSION = 3
+const DB_VERSION = 4
 
 const COLLECTIONS: CollectionName[] = [
   'users',

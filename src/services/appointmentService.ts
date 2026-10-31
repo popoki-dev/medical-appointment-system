@@ -1,8 +1,13 @@
+import { addDays } from 'date-fns'
+import { BOOKING_CONFIG } from '@/config/booking'
+import { nextAppointmentNumber } from '@/lib/appointmentNumber'
 import { formatDate, formatTime, toDateKey } from '@/lib/date'
 import { timesOverlap } from '@/lib/schedule'
-import type { Appointment, AppointmentDetails, AppointmentStatus, PaymentStatus } from '@/types'
-import { createRepository, nextSequence, ServiceError } from './repository'
-import { doctorService, SLOT_BLOCKING_STATUSES } from './doctorService'
+import { generateId } from '@/lib/utils'
+import { bookingDetailsSchema } from '@/lib/validation'
+import type { Appointment, AppointmentContact, AppointmentDetails, AppointmentStatus, PaymentStatus } from '@/types'
+import { createRepository, delay, ServiceError } from './repository'
+import { computeSlots, SLOT_BLOCKING_STATUSES } from './doctorService'
 import { notificationService } from './notificationService'
 import { storageService } from './storageService'
 import { toAuthUser } from './userService'
@@ -41,7 +46,12 @@ export interface BookAppointmentInput {
   appointmentDate: string
   startTime: string
   reason: string
+  notes?: string
+  contact?: AppointmentContact
 }
+
+/** The last date ("yyyy-MM-dd") that can be booked today, given the booking horizon. */
+export const lastBookableDate = (now = new Date()) => toDateKey(addDays(now, BOOKING_CONFIG.horizonDays - 1))
 
 const byDateTime = (a: Appointment, b: Appointment) =>
   `${a.appointmentDate}${a.startTime}`.localeCompare(`${b.appointmentDate}${b.startTime}`)
@@ -79,20 +89,38 @@ function withDetails(appointments: Appointment[]): AppointmentDetails[] {
   })
 }
 
-/** Throws unless the doctor works and is free for the slot, and the patient has no clash. */
-async function assertSlotBookable(
+/**
+ * Throws unless the slot can be booked: within the booking window, the doctor active and
+ * working then, nothing overlapping on the doctor's calendar, and no clash for the patient.
+ * Synchronous on purpose: callers check and write in one step, so two submissions can't
+ * both pass.
+ */
+function checkSlotBookable(
   input: Pick<Appointment, 'patientId' | 'doctorId' | 'appointmentDate' | 'startTime'>,
   excludeAppointmentId?: string,
 ) {
-  if (input.appointmentDate < toDateKey(new Date())) throw new ServiceError('Appointments cannot be booked in the past')
-  const slots = await doctorService.getAvailableSlots(input.doctorId, input.appointmentDate, { excludeAppointmentId })
-  const slot = slots.find((s) => s.startTime === input.startTime)
+  const today = toDateKey(new Date())
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.appointmentDate)) throw new ServiceError('Please choose a valid date')
+  if (input.appointmentDate < today) throw new ServiceError('Appointments cannot be booked in the past')
+  if (input.appointmentDate > lastBookableDate()) {
+    throw new ServiceError(`Appointments can be booked up to ${BOOKING_CONFIG.horizonDays} days ahead`)
+  }
+
+  const doctor = storageService.getById('doctors', input.doctorId)
+  if (!doctor) throw new ServiceError('Doctor not found', 'NOT_FOUND')
+  if (doctor.status !== 'active') throw new ServiceError(`${doctor.fullName} is not taking appointments at the moment`, 'CONFLICT')
+  if (storageService.getById('departments', doctor.departmentId)?.status !== 'active') {
+    throw new ServiceError('This department is not taking appointments at the moment', 'CONFLICT')
+  }
+
+  // Slot availability already accounts for overlapping appointments on the doctor's calendar.
+  const slot = computeSlots(input.doctorId, input.appointmentDate, excludeAppointmentId).find((s) => s.startTime === input.startTime)
   if (!slot) throw new ServiceError('The doctor is not available at that time')
   if (!slot.available) throw new ServiceError('This time slot has just been booked. Please choose another.', 'CONFLICT')
 
   const patientClash = storageService
     .getAll('appointments')
-    .some(
+    .find(
       (a) =>
         a.id !== excludeAppointmentId &&
         a.patientId === input.patientId &&
@@ -100,7 +128,12 @@ async function assertSlotBookable(
         isBlocking(a.status) &&
         timesOverlap(a, slot),
     )
-  if (patientClash) throw new ServiceError('The patient already has an appointment at this time', 'CONFLICT')
+  if (patientClash) {
+    throw new ServiceError(
+      `You already have an appointment (${patientClash.appointmentNumber}) at ${formatTime(patientClash.startTime)} that day.`,
+      'CONFLICT',
+    )
+  }
   return slot
 }
 
@@ -135,44 +168,75 @@ export const appointmentService = {
     return withDetails([await repo.getById(id)])[0]
   },
 
-  /** Books a new appointment as `pending`, after checking availability and clashes. */
+  /**
+   * Books a new appointment as `pending`. Re-validates the details, rechecks the slot
+   * and both calendars, numbers it (APT-yyyyMMdd-NNNN) and notifies the patient, the
+   * doctor and the front desk.
+   */
   async create(input: BookAppointmentInput) {
+    await delay()
+    // From here to the insert everything is synchronous, so a double submit can't slip through.
     const patient = storageService.getById('patients', input.patientId)
-    const doctor = storageService.getById('doctors', input.doctorId)
     if (!patient) throw new ServiceError('Patient not found', 'NOT_FOUND')
-    if (!doctor) throw new ServiceError('Doctor not found', 'NOT_FOUND')
-    if (!input.reason.trim()) throw new ServiceError('Please give a reason for the visit')
+    const patientUser = storageService.getById('users', patient.userId)
+    const details = bookingDetailsSchema.safeParse({
+      reason: input.reason,
+      notes: input.notes ?? '',
+      phone: input.contact?.phone ?? patientUser?.phone ?? '',
+      email: input.contact?.email ?? patientUser?.email ?? '',
+    })
+    if (!details.success) {
+      const issue = details.error.issues[0]
+      throw new ServiceError(issue.message, 'VALIDATION', String(issue.path[0]))
+    }
+    const slot = checkSlotBookable(input)
+    const doctor = storageService.getById('doctors', input.doctorId)!
 
-    const slot = await assertSlotBookable(input)
-    const now = new Date().toISOString()
-    const appointment = await repo.create({
-      appointmentNumber: nextSequence(storageService.getAll('appointments').map((a) => a.appointmentNumber), 'APT-', 6),
-      patientId: input.patientId,
-      doctorId: input.doctorId,
+    const now = new Date()
+    const { reason, notes, phone, email } = details.data
+    const appointment = storageService.insert('appointments', {
+      id: generateId('apt'),
+      appointmentNumber: nextAppointmentNumber(storageService.getAll('appointments').map((a) => a.appointmentNumber), now),
+      patientId: patient.id,
+      doctorId: doctor.id,
       departmentId: doctor.departmentId,
       appointmentDate: input.appointmentDate,
       startTime: slot.startTime,
       endTime: slot.endTime,
-      reason: input.reason.trim(),
+      reason,
+      ...(notes ? { notes } : {}),
+      contact: { phone, email },
       status: 'pending',
       paymentStatus: 'unpaid',
-      createdAt: now,
-      updatedAt: now,
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
     })
 
-    const patientName = storageService.getById('users', patient.userId)?.fullName ?? 'A patient'
-    notificationService.notify({
-      userId: doctor.userId,
-      title: 'New appointment request',
-      message: `${patientName} requested ${describe(appointment)}.`,
-      type: 'appointment',
-    })
+    const patientName = patientUser?.fullName ?? 'A patient'
+    const when = describe(appointment)
     notificationService.notify({
       userId: patient.userId,
       title: 'Appointment requested',
-      message: `Your request with ${doctor.fullName} for ${describe(appointment)} was received.`,
+      message: `${appointment.appointmentNumber} with ${doctor.fullName} on ${when} is pending confirmation.`,
       type: 'appointment',
     })
+    notificationService.notify({
+      userId: doctor.userId,
+      title: 'New appointment request',
+      message: `${patientName} requested ${when} (${appointment.appointmentNumber}).`,
+      type: 'appointment',
+    })
+    storageService
+      .getAll('users')
+      .filter((u) => u.role === 'receptionist' && u.status === 'active')
+      .forEach((u) =>
+        notificationService.notify({
+          userId: u.id,
+          title: 'Appointment awaiting confirmation',
+          message: `${patientName} booked ${doctor.fullName} for ${when} (${appointment.appointmentNumber}).`,
+          type: 'appointment',
+        }),
+      )
     return appointment
   },
 
@@ -230,16 +294,18 @@ export const appointmentService = {
   },
 
   async reschedule(id: string, appointmentDate: string, startTime: string) {
+    await delay()
+    // Check and write in one synchronous step, as in `create`.
     const current = storageService.getById('appointments', id)
     if (!current) throw new ServiceError('Appointment not found', 'NOT_FOUND')
-    const slot = await assertSlotBookable({ ...current, appointmentDate, startTime }, id)
-    const updated = await repo.update(id, {
+    const slot = checkSlotBookable({ ...current, appointmentDate, startTime }, id)
+    const updated = storageService.update('appointments', id, {
       appointmentDate,
       startTime: slot.startTime,
       endTime: slot.endTime,
       status: 'pending',
       updatedAt: new Date().toISOString(),
-    })
+    })!
     notifyParties(updated, 'Appointment rescheduled', `Your appointment was moved to ${describe(updated)}.`)
     return updated
   },

@@ -75,6 +75,10 @@ export function AppointmentDetailsModal({ appointmentId, onOpenChange, onCancel 
               }
             />
             <Detail label="Reason for visit" value={appointment.reason} className="sm:col-span-2" />
+            {appointment.notes && <Detail label="Additional notes" value={appointment.notes} className="sm:col-span-2" />}
+            {appointment.contact && (
+              <Detail label="Contact for this visit" value={`${appointment.contact.phone} · ${appointment.contact.email}`} className="sm:col-span-2" />
+            )}
             <Detail label="Booked" value={formatDate(appointment.createdAt, 'MMM d, yyyy · h:mm a')} />
             <Detail label="Last updated" value={formatDate(appointment.updatedAt, 'MMM d, yyyy · h:mm a')} />
           </dl>

@@ -164,6 +164,37 @@ confirmation first. Cancelling sets the status to `cancelled` (a paid visit beco
 `refunded`), frees the slot and notifies both the patient and the doctor. Every dashboard
 watches the `appointments` collection, so the change shows everywhere at once, including in other tabs.
 
+## Booking wizard
+
+`/book-appointment` is for patients; signed-out visitors sign in first and come back,
+and staff are sent to their own dashboard. The six steps are department, doctor,
+date, time, details and confirm. "Book" buttons elsewhere link with `ROUTES.bookWith({ departmentId, doctorId, date, time })`.
+The wizard opens at the furthest step whose choices are still bookable and drops the
+rest with a notice. `/patient/book` redirects here.
+
+- **Date:** a calendar limited to the booking horizon (`BOOKING_CONFIG.horizonDays`,
+  30 days, in `src/config/booking.ts`). Only days with a free slot can be picked. Fully
+  booked days and days off are marked differently.
+- **Time:** slots come from `computeSlots` in `doctorService`, using the doctor's
+  weekly hours, slot length and break and the appointments that hold a slot. They are
+  local `HH:mm`, the same as the schedule, and slots that have already started today
+  are closed.
+- **Live:** availability refreshes as appointments or schedules change. A slot taken
+  while the patient reviews is flagged, and Confirm is disabled.
+
+`appointmentService.create` validates the details with the same schema as the form
+(`bookingDetailsSchema`). It then rechecks the booking window, that the doctor and
+department are active, that the slot is free, and that the patient has no overlapping
+appointment. Checks and insert run in one synchronous step, so a double-click or two
+simultaneous submissions can't both succeed. The appointment is stored as `pending` with
+a number like `APT-20261030-0001` (booking date plus a per-day sequence), and the patient,
+the doctor and the front desk are notified. The patient then lands on
+`/book-appointment/success/:appointmentId`.
+
+Slot rules (`SLOT_BLOCKING_STATUSES`): pending, confirmed, completed and no-show
+appointments hold their slot. Cancelled and rejected ones release it. Appointments are
+never deleted, so history is kept. Fees are informational only; there is no online payment.
+
 ### Backend readiness
 
 Pages and hooks only call `src/services/*`. To integrate a real API, re-implement the

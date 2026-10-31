@@ -18,17 +18,22 @@ export const ROUTES = {
   register: '/register',
   forgotPassword: '/forgot-password',
 
+  /** The booking wizard. Patients only; signed-out visitors are sent to sign in first. */
+  bookAppointment: '/book-appointment',
+  /** The booking wizard, optionally pre-filled with a department, doctor, date and time. */
+  bookWith: (params: BookingPrefill = {}) => {
+    const query = new URLSearchParams(Object.entries(params).filter((entry): entry is [string, string] => !!entry[1]))
+    const search = query.toString()
+    return search ? `/book-appointment?${search}` : '/book-appointment'
+  },
+  bookingSuccess: (appointmentId: string) => `/book-appointment/success/${appointmentId}`,
+
   patient: {
     root: '/patient',
     dashboard: '/patient/dashboard',
     doctors: '/patient/doctors',
-    book: '/patient/book',
-    /** The booking flow, optionally pre-filled with a department, doctor, date and time. */
-    bookWith: (params: BookingPrefill = {}) => {
-      const query = new URLSearchParams(Object.entries(params).filter((entry): entry is [string, string] => !!entry[1]))
-      const search = query.toString()
-      return search ? `/patient/book?${search}` : '/patient/book'
-    },
+    /** Old address of the booking flow; redirects to `bookAppointment`. */
+    legacyBook: '/patient/book',
     appointments: '/patient/appointments',
     medical: '/patient/medical',
     notifications: '/patient/notifications',

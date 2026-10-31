@@ -71,7 +71,7 @@ export function DoctorProfilePage() {
 
   const department = departments?.find((d) => d.id === doctor.departmentId)
   const bookable = doctor.status === 'active'
-  const bookHref = ROUTES.patient.bookWith({ doctorId: doctor.id })
+  const bookHref = ROUTES.bookWith({ doctorId: doctor.id })
 
   return (
     <>
@@ -148,7 +148,7 @@ export function DoctorProfilePage() {
                   <TimeSlotPicker
                     slots={slots}
                     loading={slotsLoading}
-                    onChange={(time) => navigate(ROUTES.patient.bookWith({ doctorId: doctor.id, date: selectedDate, time }))}
+                    onChange={(time) => navigate(ROUTES.bookWith({ doctorId: doctor.id, date: selectedDate, time }))}
                     emptyMessage={`${doctor.fullName} doesn't see patients on ${formatDate(selectedDate, 'EEEE, MMM d')}. Try another day.`}
                   />
                 ) : (

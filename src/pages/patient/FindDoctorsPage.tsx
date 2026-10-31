@@ -105,7 +105,7 @@ export function FindDoctorsPage() {
                   <span className="text-muted-foreground"> / visit</span>
                 </span>
                 <Button size="sm" asChild>
-                  <Link to={`${ROUTES.patient.book}?doctorId=${doctor.id}`}>
+                  <Link to={ROUTES.bookWith({ doctorId: doctor.id })}>
                     <CalendarPlus /> Book
                   </Link>
                 </Button>

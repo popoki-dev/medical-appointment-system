@@ -13,7 +13,16 @@ export function describeNextSlot(next: DoctorAvailability['next']) {
 }
 
 /** "Next available: Today, 2:30 PM", or a fully-booked notice. */
-export function NextAvailable({ availability, className }: { availability?: DoctorAvailability; className?: string }) {
+export function NextAvailable({
+  availability,
+  emptyLabel = 'No openings in the next two weeks',
+  className,
+}: {
+  availability?: DoctorAvailability
+  /** Shown when there is no free slot in the window the availability covers. */
+  emptyLabel?: string
+  className?: string
+}) {
   if (!availability) return <span className={cn('h-4 w-40 animate-pulse rounded bg-muted', className)} aria-hidden />
   const label = describeNextSlot(availability.next)
   return (
@@ -25,7 +34,7 @@ export function NextAvailable({ availability, className }: { availability?: Doct
           <span className="whitespace-nowrap font-medium">{label}</span>
         </span>
       ) : (
-        'No openings in the next two weeks'
+        emptyLabel
       )}
     </span>
   )
